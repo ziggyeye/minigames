@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["nodejs_18", "npm"]
+
+[phases.install]
+cmds = [
+  "npm config set registry https://registry.npmjs.org/",
+  "npm ci --registry https://registry.npmjs.org/"
+]
+
+[phases.build]
+cmds = ["echo 'Build complete'"]
+
+[start]
+cmd = "npm start"

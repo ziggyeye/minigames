@@ -1,0 +1,23 @@
+{
+  "name": "discord-minigames-client",
+  "version": "1.0.0",
+  "description": "Client for Discord Minigames Activity",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "build": "echo 'No build step needed for static files'",
+    "preview": "npx serve . -p 3000"
+  },
+  "keywords": [
+    "discord",
+    "minigames",
+    "activity",
+    "html5",
+    "canvas"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
