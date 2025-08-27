@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "*.js",
+    "*.html",
+    "*.css",
+    "circus/**/*"
+  ],
+  "ext": "js,html,css,json",
+  "ignore": [
+    "node_modules/**/*",
+    ".git/**/*"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": "1000"
+}
