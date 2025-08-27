@@ -1,19 +1,33 @@
 {
   "name": "discord-minigames-client",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Client for Discord Minigames Activity",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite preview",
+    "serve": "vite preview"
+  },
+  "keywords": [
+    "discord",
+    "minigames",
+    "activity",
+    "html5",
+    "canvas",
+    "vite"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^3.90.0"
   },
   "devDependencies": {
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "terser": "^5.24.0"
   },
-  "dependencies": {
-    "@discord/embedded-app-sdk": "^2.2.0",
-    "discord.js": "^14.22.1",
-    "phaser": "^3.90.0"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

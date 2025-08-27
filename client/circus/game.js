@@ -1,5 +1,12 @@
 import { sendScoreToService } from './gameservices.js';
 
+// Import assets using Vite's asset handling
+import playerImageUrl from '/assets/player.svg';
+import trampolineImageUrl from '/assets/trampoline.svg';
+import balloonImageUrl from '/assets/balloon.svg';
+import backgroundImageUrl from '/assets/background.svg';
+import bounceSoundUrl from '/assets/bounce.mp3';
+
 // Game constants
 const GRAVITY = 0.5;
 const BOUNCE_FACTOR = 0.7;
@@ -21,11 +28,11 @@ let trampolineImage = new Image();
 let balloonImage = new Image();
 let backgroundImage = new Image();
 
-// Preload images
-playerImage.src = 'assets/player.svg';
-trampolineImage.src = 'assets/trampoline.svg';
-balloonImage.src = 'assets/balloon.svg';
-backgroundImage.src = 'assets/background.svg';
+// Preload images with Vite-processed URLs
+playerImage.src = playerImageUrl;
+trampolineImage.src = trampolineImageUrl;
+balloonImage.src = balloonImageUrl;
+backgroundImage.src = backgroundImageUrl;
 
 // Audio handling
 let audioContext = null;
@@ -289,8 +296,8 @@ async function initAudio() {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
-            // Load the bounce sound
-            const response = await fetch('assets/bounce.mp3');
+            // Load the bounce sound using Vite-processed URL
+            const response = await fetch(bounceSoundUrl);
             const arrayBuffer = await response.arrayBuffer();
             bounceSound = await audioContext.decodeAudioData(arrayBuffer);
             
@@ -306,12 +313,6 @@ async function initAudio() {
 // Initialize game
 function initGame() {
     resizeCanvas();
-    
-    // Load game assets
-    playerImage.src = 'assets/player.svg';
-    trampolineImage.src = 'assets/trampoline.svg';
-    balloonImage.src = 'assets/balloon.svg';
-    backgroundImage.src = 'assets/background.svg';
     
     // Initialize audio
     initAudio();

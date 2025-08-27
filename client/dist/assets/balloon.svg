@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+    <!-- Balloon body -->
+    <ellipse cx="20" cy="25" rx="15" ry="20" fill="currentColor"/>
+    
+    <!-- Balloon knot -->
+    <circle cx="20" cy="45" r="2" fill="#7f8c8d"/>
+    
+    <!-- Balloon string -->
+    <line x1="20" y1="45" x2="20" y2="50" stroke="#7f8c8d" stroke-width="1"/>
+</svg> 

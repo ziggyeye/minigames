@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circus Game - Discord</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #34495e;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+        }
+
+        #startScreen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #startScreen p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        #startButton, #restartButton {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #startButton:hover, #restartButton:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        #gameCanvas {
+            border: 2px solid white;
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #scoreDisplay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 5;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10;
+        }
+
+        #gameOverScreen h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #gameOverScreen p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            #startScreen h1 {
+                font-size: 2rem;
+            }
+            
+            #startScreen p {
+                font-size: 1rem;
+            }
+            
+            #startButton, #restartButton {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1>🎪 Circus Game</h1>
+            <p>Pop balloons by bouncing on the trampoline!<br>Use mouse or touch to control the trampoline.</p>
+            <button id="startButton">Start Game</button>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Score Display -->
+        <div id="scoreDisplay">
+            <span id="score">Score: 0</span>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            Move mouse/touch to control trampoline
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="restartButton">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Simplified Circus Game for Discord
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreDisplay = document.getElementById('score');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+
+        // Game state
+        let gameState = {
+            isStarted: false,
+            isPlaying: false,
+            score: 0,
+            balloonsPopped: 0
+        };
+
+        // Game objects
+        let player = { x: 0, y: 0, width: 40, height: 40, velocityX: 0, velocityY: 0 };
+        let trampoline = { x: 0, y: 0, width: 100, height: 20, targetX: 0 };
+        let balloons = [];
+
+        // Game constants
+        const GRAVITY = 0.5;
+        const BOUNCE_VELOCITY = 15;
+        const BALLOON_ROWS = 3;
+        const BALLOONS_PER_ROW = 8;
+
+        // Set canvas size
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = Math.min(800, window.innerWidth - 40);
+            canvas.height = Math.min(600, window.innerHeight - 40);
+            
+            // Update game objects
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            
+            trampoline.x = canvas.width / 2 - trampoline.width / 2;
+            trampoline.y = canvas.height - 60;
+        }
+
+        // Initialize game
+        function initGame() {
+            resizeCanvas();
+            
+            // Create balloons
+            balloons = [];
+            const balloonWidth = 30;
+            const balloonHeight = 40;
+            const horizontalSpacing = canvas.width / (BALLOONS_PER_ROW + 1);
+            const verticalSpacing = 20;
+            
+            const colors = ['#e74c3c', '#3498db', '#f1c40f'];
+            const firstRowY = 50;
+            
+            for (let row = 0; row < BALLOON_ROWS; row++) {
+                for (let col = 0; col < BALLOONS_PER_ROW; col++) {
+                    const x = (col + 1) * horizontalSpacing;
+                    const y = firstRowY + (row * (balloonHeight + verticalSpacing));
+                    
+                    balloons.push({
+                        x: x,
+                        y: y,
+                        width: balloonWidth,
+                        height: balloonHeight,
+                        isPopped: false,
+                        color: colors[row]
+                    });
+                }
+            }
+            
+            // Reset game state
+            gameState.score = 0;
+            gameState.balloonsPopped = 0;
+            gameState.isStarted = true;
+            gameState.isPlaying = false;
+            
+            // Update displays
+            scoreDisplay.textContent = `Score: ${gameState.score}`;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+        }
+
+        // Game loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw trampoline
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(trampoline.x, trampoline.y, trampoline.width, trampoline.height);
+            
+            if (!gameState.isStarted) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            // Update trampoline
+            trampoline.x += (trampoline.targetX - trampoline.x) * 0.2;
+            
+            // Keep trampoline within bounds
+            if (trampoline.x < 0) trampoline.x = 0;
+            if (trampoline.x + trampoline.width > canvas.width) {
+                trampoline.x = canvas.width - trampoline.width;
+            }
+            
+            // Update player
+            if (gameState.isPlaying) {
+                player.velocityY += GRAVITY;
+                player.x += player.velocityX;
+                player.y += player.velocityY;
+                
+                // Check collision with trampoline
+                if (player.y + player.height > trampoline.y &&
+                    player.x + player.width > trampoline.x &&
+                    player.x < trampoline.x + trampoline.width &&
+                    player.velocityY > 0) {
+                    
+                    player.y = trampoline.y - player.height;
+                    player.velocityY = -BOUNCE_VELOCITY;
+                    player.velocityX = (player.x - (trampoline.x + trampoline.width/2)) * 0.2;
+                }
+                
+                // Check wall collisions
+                if (player.x < 0) {
+                    player.x = 0;
+                    player.velocityX *= -0.5;
+                }
+                if (player.x + player.width > canvas.width) {
+                    player.x = canvas.width - player.width;
+                    player.velocityX *= -0.5;
+                }
+                
+                // Check ceiling collision
+                if (player.y < 0) {
+                    player.y = 0;
+                    player.velocityY *= -0.7;
+                }
+                
+                // Check if player fell off
+                if (player.y > canvas.height) {
+                    gameOver();
+                }
+            }
+            
+            // Update balloons
+            balloons.forEach(balloon => {
+                if (!balloon.isPopped) {
+                    // Check collision with player
+                    if (player.x < balloon.x + balloon.width &&
+                        player.x + player.width > balloon.x &&
+                        player.y < balloon.y + balloon.height &&
+                        player.y + player.height > balloon.y) {
+                        
+                        balloon.isPopped = true;
+                        gameState.score += 10;
+                        gameState.balloonsPopped++;
+                        scoreDisplay.textContent = `Score: ${gameState.score}`;
+                    }
+                }
+            });
+            
+            // Draw balloons
+            balloons.forEach(balloon => {
+                if (!balloon.isPopped) {
+                    ctx.fillStyle = balloon.color;
+                    ctx.beginPath();
+                    ctx.arc(balloon.x + balloon.width/2, balloon.y + balloon.height/2, 
+                            balloon.width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            
+            // Draw player
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game over function
+        function gameOver() {
+            gameState.isStarted = false;
+            finalScoreDisplay.textContent = gameState.score;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        // Mouse and touch controls
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameState.isStarted || !gameState.isPlaying) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            trampoline.targetX = x - trampoline.width/2;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!gameState.isStarted || !gameState.isPlaying) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            trampoline.targetX = x - trampoline.width/2;
+        });
+
+        // Button handlers
+        startButton.addEventListener('click', () => {
+            gameState.isPlaying = true;
+        });
+
+        restartButton.addEventListener('click', () => {
+            initGame();
+            gameState.isPlaying = true;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (gameState.isStarted) {
+                initGame();
+            }
+        });
+
+        // Initialize the game
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>
