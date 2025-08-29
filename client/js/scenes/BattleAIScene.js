@@ -56,10 +56,11 @@ export default class BattleAIScene extends Phaser.Scene {
         });
         
         // Try to get API key from environment variables first, then localStorage as fallback
-        const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
-                      localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
-                      null;
-        
+        // const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
+        //               localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
+        //               null;
+        const apiKey = null;
+
         console.log('Final API key result:', apiKey ? 'Found' : 'Not found');
         return apiKey;
     }
@@ -127,19 +128,19 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // API Key button (if not set)
-        if (!this.getAPIKey()) {
-            const apiKeyButton = this.add.text(centerX + 200, centerY - 150, '🔑 Set API Key', {
-                fontSize: '14px',
-                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                color: '#ffffff',
-                backgroundColor: '#f39c12',
-                padding: { x: 8, y: 4 }
-            });
-            apiKeyButton.setInteractive();
-            apiKeyButton.on('pointerdown', () => {
-                this.showAPIKeyInput();
-            });
-        }
+        // if (!this.getAPIKey()) {
+        //     const apiKeyButton = this.add.text(centerX + 200, centerY - 150, '🔑 Set API Key', {
+        //         fontSize: '14px',
+        //         fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //         color: '#ffffff',
+        //         backgroundColor: '#f39c12',
+        //         padding: { x: 8, y: 4 }
+        //     });
+        //     apiKeyButton.setInteractive();
+        //     apiKeyButton.on('pointerdown', () => {
+        //         this.showAPIKeyInput();
+        //     });
+        // }
 
         // Name input label
         this.add.text(centerX - 250, centerY - 80, 'Character Name:', {
@@ -517,7 +518,7 @@ Format your response as a single paragraph.`;
         const centerY = this.cameras.main.centerY;
 
         // Create battle result background with fixed dimensions
-        const modalWidth = 900;
+        const modalWidth = 600;
         const modalHeight = 700;
         const modalX = centerX - modalWidth / 2;
         const modalY = centerY - modalHeight / 2;
@@ -540,28 +541,28 @@ Format your response as a single paragraph.`;
         const vsY = modalY + 100;
         
         // Player character name (left)
-        this.add.text(modalX + 100, vsY, this.playerCharacter.name, {
-            fontSize: '32px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        });
+        // this.add.text(modalX + 100, vsY, this.playerCharacter.name, {
+        //     fontSize: '32px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     fontStyle: 'bold'
+        // });
 
         // VS separator (center)
-        this.add.text(centerX, vsY, 'VS', {
+        this.add.text(centerX, vsY, this.playerCharacter.name + ' VS ' + this.aiCharacter.name, {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
+            color: '#00ff00',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // AI character name (right)
-        this.add.text(modalX + modalWidth - 100, vsY, this.aiCharacter.name, {
-            fontSize: '32px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(1, 0);
+        // this.add.text(modalX + modalWidth - 100, vsY, this.aiCharacter.name, {
+        //     fontSize: '32px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     fontStyle: 'bold'
+        // }).setOrigin(1, 0);
 
         // Battle description
         const descY = vsY + 80;
@@ -604,7 +605,7 @@ Format your response as a single paragraph.`;
         }).setOrigin(0.5);
         battleAgainButton.setInteractive();
         battleAgainButton.on('pointerdown', () => {
-            this.scene.restart();
+            this.startNewBattle();
         });
 
         // Back to menu button
@@ -678,5 +679,18 @@ Format your response as a single paragraph.`;
 
     update() {
         // Add any update logic here if needed
+    }
+
+    restartGame() {
+        this.scene.restart();
+    }
+
+    startNewBattle() {
+        // Keep the same player character but generate a new AI opponent
+        this.isLoading = true;
+        this.showLoadingScreen();
+        
+        // Generate new AI opponent
+        this.generateAIOpponent();
     }
 }
