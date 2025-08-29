@@ -9,7 +9,7 @@ This document explains how to set up environment variables for the Breakout game
 These variables are used by the client-side code and must be prefixed with `VITE_`:
 
 ```env
-VITE_DISCORD_CLIENT_ID=1397285583256158328
+VITE_DISCORD_CLIENT_ID=xxx
 ```
 
 ### Server-Side Variables

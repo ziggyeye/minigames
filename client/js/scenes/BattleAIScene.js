@@ -9,6 +9,17 @@ export default class BattleAIScene extends Phaser.Scene {
         this.isLoading = false;
         this.genAI = null;
         this.model = null;
+        
+        // Battle statistics
+        this.battleStats = {
+            totalBattles: 0,
+            wins: 0,
+            losses: 0,
+            ties: 0
+        };
+        
+        // Load stats from localStorage
+        this.loadBattleStats();
     }
 
     preload() {
@@ -17,6 +28,8 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     create() {
+
+
         // Initialize Google GenAI
         this.initializeGenAI();
         
@@ -63,6 +76,44 @@ export default class BattleAIScene extends Phaser.Scene {
 
         console.log('Final API key result:', apiKey ? 'Found' : 'Not found');
         return apiKey;
+    }
+
+    loadBattleStats() {
+        try {
+            const savedStats = localStorage.getItem('battleStats');
+            if (savedStats) {
+                this.battleStats = JSON.parse(savedStats);
+            }
+        } catch (error) {
+            console.error('Error loading battle stats:', error);
+        }
+    }
+
+    saveBattleStats() {
+        try {
+            localStorage.setItem('battleStats', JSON.stringify(this.battleStats));
+        } catch (error) {
+            console.error('Error saving battle stats:', error);
+        }
+    }
+
+    updateBattleStats(result) {
+        this.battleStats.totalBattles++;
+        
+        if (result === 'win') {
+            this.battleStats.wins++;
+        } else if (result === 'loss') {
+            this.battleStats.losses++;
+        } else if (result === 'tie') {
+            this.battleStats.ties++;
+        }
+        
+        this.saveBattleStats();
+    }
+
+    getWinRate() {
+        if (this.battleStats.totalBattles === 0) return 0;
+        return Math.round((this.battleStats.wins / this.battleStats.totalBattles) * 100);
     }
 
     createBackground() {
@@ -419,10 +470,15 @@ Format your response as a single paragraph.`;
             description: battleText.trim()
         };
 
+        // Update battle statistics
+        const result = winner === this.playerCharacter ? 'win' : 'loss';
+        this.updateBattleStats(result);
+
         console.log('Parsed battle result:', {
             winner: winner.name,
             loser: loser.name,
-            description: battleText.trim()
+            description: battleText.trim(),
+            result: result
         });
 
         this.isLoading = false;
@@ -458,6 +514,10 @@ Format your response as a single paragraph.`;
             loser: loser,
             description: battleDescriptions[Math.floor(Math.random() * battleDescriptions.length)]
         };
+
+        // Update battle statistics
+        const result = winner === this.playerCharacter ? 'win' : 'loss';
+        this.updateBattleStats(result);
 
         this.isLoading = false;
         this.showBattleResult();
@@ -594,8 +654,59 @@ Format your response as a single paragraph.`;
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
+        // Battle statistics section
+        const statsY = outcomeY + 120;
+        
+        // Stats background
+        const statsBg = this.add.graphics();
+        statsBg.fillStyle(0xffffff, 0.1);
+        statsBg.fillRoundedRect(centerX - 200, statsY, 400, 80, 10);
+        statsBg.lineStyle(1, 0xffffff, 0.3);
+        statsBg.strokeRoundedRect(centerX - 200, statsY, 400, 80, 10);
+
+        // Stats title
+        this.add.text(centerX, statsY + 10, 'Battle Statistics', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Stats row 1: Total Battles and Win Rate
+        this.add.text(centerX - 150, statsY + 30, `Total: ${this.battleStats.totalBattles}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff'
+        });
+
+        this.add.text(centerX + 50, statsY + 30, `Win Rate: ${this.getWinRate()}%`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#2ecc71',
+            fontStyle: 'bold'
+        });
+
+        // Stats row 2: Wins, Losses, Ties
+        this.add.text(centerX - 150, statsY + 50, `W: ${this.battleStats.wins}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#2ecc71'
+        });
+
+        this.add.text(centerX - 50, statsY + 50, `L: ${this.battleStats.losses}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#e74c3c'
+        });
+
+        this.add.text(centerX + 50, statsY + 50, `T: ${this.battleStats.ties}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#f39c12'
+        });
+
         // Battle again button
-        const buttonY = outcomeY + 120;
+        const buttonY = statsY + 100;
         const battleAgainButton = this.add.text(centerX, buttonY, '⚔️ Battle Again!', {
             fontSize: '20px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',

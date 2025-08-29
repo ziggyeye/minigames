@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  DISCORD_CLIENT_ID = "1410373492049838241"
+  GOOGLE_GENAI_API_KEY = "AIzaSyDot7PTPF5hBii9H16BpHGOx6B47FE5HyI"
 
 [[redirects]]
   from = "/api/*"

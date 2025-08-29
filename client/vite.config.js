@@ -55,6 +55,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'process.env.GOOGLE_GENAI_API_KEY': JSON.stringify(env.GOOGLE_GENAI_API_KEY),
+      'process.env.DISCORD_CLIENT_ID': JSON.stringify(env.DISCORD_CLIENT_ID),
       'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || mode)
     }
   };

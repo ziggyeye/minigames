@@ -1,3 +1,5 @@
+import { DiscordManager } from '../DiscordManager.js';
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -9,6 +11,9 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
+
+        this.initDiscord();
+
         // Create background
         this.createBackground();
         
@@ -19,10 +24,97 @@ export default class MenuScene extends Phaser.Scene {
         this.createGameCards();
         
         // Create high scores section
-        this.createHighScores();
+        //this.createHighScores();
         
         // Add interactive elements
         this.addInteractivity();
+    }
+
+    async initDiscord() {
+        try {
+            this.discordManager = new DiscordManager();
+            await this.discordManager.initialize();
+
+            const playerName = this.discordManager.getCurrentUserName();
+            console.log('Player name:', playerName);
+            
+            // Display the username in the menu
+            this.displayUserName(playerName);
+            
+            // Set up periodic checks for Discord user updates
+            this.setupDiscordUserUpdates();
+        } catch (error) {
+            console.error('Error initializing Discord:', error);
+            // Fallback to default user
+            this.displayUserName('Player');
+        }
+    }
+
+    setupDiscordUserUpdates() {
+        // Check for Discord user updates every 5 seconds
+        this.discordUpdateTimer = this.time.addEvent({
+            delay: 5000,
+            callback: this.checkDiscordUserUpdate,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    checkDiscordUserUpdate() {
+        if (this.discordManager) {
+            const currentUser = this.discordManager.getCurrentUser();
+            const currentName = this.discordManager.getCurrentUserName();
+            
+            // Update display if user changed
+            if (this.lastKnownUser !== currentUser.id) {
+                this.lastKnownUser = currentUser.id;
+                this.updateUserName(currentName);
+                console.log('Discord user updated:', currentName);
+            }
+        }
+    }
+
+    displayUserName(username) {
+        const centerX = this.cameras.main.centerX;
+        const userY = this.cameras.main.height-100; // Position below the title
+
+        // User welcome text
+        this.userNameText = this.add.text(centerX, userY, `Welcome, ${username}!`, {
+            fontSize: '24px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        // Add a subtle animation
+        this.tweens.add({
+            targets: this.userNameText,
+            alpha: 0.8,
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Display user status (Discord vs Local)
+        const isDiscord = this.discordManager ? this.discordManager.isInDiscord() : false;
+        const statusText = isDiscord ? '🟢 Connected to Discord' : '🟡 Local Mode';
+        const statusColor = isDiscord ? '#2ecc71' : '#f39c12';
+        
+        this.userStatusText = this.add.text(centerX, userY + 35, statusText, {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: statusColor,
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+    }
+
+    updateUserName(newUsername) {
+        if (this.userNameText) {
+            this.userNameText.setText(`Welcome, ${newUsername}!`);
+        }
     }
 
     createBackground() {
@@ -121,37 +213,37 @@ export default class MenuScene extends Phaser.Scene {
         card.gameType = gameType;
         
         // Add hover effects
-        card.on('pointerover', () => {
-            card.clear();
-            card.fillStyle(0xffffff, 0.2);
-            card.fillRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
-            card.lineStyle(2, 0xffffff, 0.4);
-            card.strokeRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
+        // card.on('pointerover', () => {
+        //     card.clear();
+        //     card.fillStyle(0xffffff, 0.2);
+        //     card.fillRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
+        //     card.lineStyle(2, 0xffffff, 0.4);
+        //     card.strokeRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
             
-            // Add subtle animation
-            this.tweens.add({
-                targets: [card, descText],
-                y: y - 5,
-                duration: 200,
-                ease: 'Power2'
-            });
-        });
+        //     // Add subtle animation
+        //     this.tweens.add({
+        //         targets: [card, descText],
+        //         y: y - 5,
+        //         duration: 200,
+        //         ease: 'Power2'
+        //     });
+        // });
         
-        card.on('pointerout', () => {
-            card.clear();
-            card.fillStyle(0xffffff, 0.1);
-            card.fillRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
-            card.lineStyle(2, 0xffffff, 0.2);
-            card.strokeRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
+        // card.on('pointerout', () => {
+        //     card.clear();
+        //     card.fillStyle(0xffffff, 0.1);
+        //     card.fillRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
+        //     card.lineStyle(2, 0xffffff, 0.2);
+        //     card.strokeRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
             
-            // Reset position
-            this.tweens.add({
-                targets: [card, descText],
-                y: y,
-                duration: 200,
-                ease: 'Power2'
-            });
-        });
+        //     // Reset position
+        //     this.tweens.add({
+        //         targets: [card, descText],
+        //         y: y,
+        //         duration: 200,
+        //         ease: 'Power2'
+        //     });
+        // });
         
         card.on('pointerdown', () => {
             this.handleGameSelection(card.gameType);
@@ -212,14 +304,14 @@ export default class MenuScene extends Phaser.Scene {
 
     addInteractivity() {
         // Add keyboard support
-        this.input.keyboard.on('keydown-C', () => {
-            this.handleGameSelection('circus');
-        });
+        // this.input.keyboard.on('keydown-C', () => {
+        //     this.handleGameSelection('circus');
+        // });
         
-        this.input.keyboard.on('keydown-ESC', () => {
-            // Could be used for settings or exit
-            console.log('ESC pressed');
-        });
+        // this.input.keyboard.on('keydown-ESC', () => {
+        //     // Could be used for settings or exit
+        //     console.log('ESC pressed');
+        // });
     }
 
     handleGameSelection(gameType) {
