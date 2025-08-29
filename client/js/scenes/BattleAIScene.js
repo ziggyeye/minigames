@@ -47,8 +47,21 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     getAPIKey() {
-        // Try to get API key from environment or localStorage
-        return "AIzaSyDot7PTPF5hBii9H16BpHGOx6B47FE5HyI";
+        // Debug logging
+        console.log('Environment check:', {
+            processEnv: process.env.GOOGLE_GENAI_API_KEY,
+            localStorage: localStorage.getItem('GOOGLE_GENAI_API_KEY'),
+            hasProcessEnv: !!process.env.GOOGLE_GENAI_API_KEY,
+            hasLocalStorage: !!localStorage.getItem('GOOGLE_GENAI_API_KEY')
+        });
+        
+        // Try to get API key from environment variables first, then localStorage as fallback
+        const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
+                      localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
+                      null;
+        
+        console.log('Final API key result:', apiKey ? 'Found' : 'Not found');
+        return apiKey;
     }
 
     createBackground() {

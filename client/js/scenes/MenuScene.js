@@ -202,7 +202,7 @@ export default class MenuScene extends Phaser.Scene {
         });
         
         // Info text
-        this.add.text(centerX, centerY + 50, '🎮 Ready to play! Click on a game above to get started.', {
+        this.add.text(centerX, centerY + 170, '🎮 Ready to play! Click on a game above to get started.', {
             fontSize: '14px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
