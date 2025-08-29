@@ -1,40 +1,35 @@
-import { defineConfig } from 'vite'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
-  root: '.',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        circus: resolve(__dirname, 'circus/index.html'),
-        'circus-discord': resolve(__dirname, 'circus-discord.html')
+        main: resolve(__dirname, 'index.html')
       },
       output: {
-        // Ensure assets are properly hashed and cached
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.')
-          const ext = info[info.length - 1]
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-            return `assets/images/[name]-[hash].[ext]`
+            return `assets/images/[name]-[hash][extname]`;
           }
           if (/mp3|wav|ogg|m4a/i.test(ext)) {
-            return `assets/audio/[name]-[hash].[ext]`
+            return `assets/audio/[name]-[hash][extname]`;
           }
-          return `assets/[name]-[hash].[ext]`
-        },
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js'
+          return `assets/[name]-[hash][extname]`;
+        }
       }
     },
-    // Copy assets to build directory
-    copyPublicDir: true,
-    // Minify for production
     minify: 'terser',
-    // Source maps for debugging
-    sourcemap: false
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true
+      }
+    }
   },
   server: {
     port: 3000,
@@ -43,12 +38,15 @@ export default defineConfig({
   },
   preview: {
     port: 3000,
-    host: true
+    host: true,
+    open: true
   },
-  // Handle static assets
-  publicDir: 'public',
-  // Optimize dependencies
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'js')
+    }
+  },
   optimizeDeps: {
     include: ['phaser']
   }
-})
+});

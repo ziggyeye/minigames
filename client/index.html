@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Minigames</title>
+    <title>Discord Minigames - Phaser 3</title>
     <style>
         * {
             margin: 0;
@@ -13,251 +13,83 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #000;
             color: white;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow-x: hidden;
         }
 
-        .container {
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Loading screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-content {
             text-align: center;
-            max-width: 600px;
-            width: 100%;
         }
 
-        h1 {
-            font-size: clamp(2rem, 5vw, 3rem);
+        .loading h1 {
+            font-size: 2rem;
             margin-bottom: 1rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .subtitle {
-            font-size: clamp(1rem, 3vw, 1.2rem);
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .game-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            min-height: 150px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .game-card:hover {
-            transform: translateY(-3px);
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-
-        .game-icon {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 1rem;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .game-title {
-            font-size: 1.3rem;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
-
-        .game-description {
-            font-size: 0.85rem;
+        .loading p {
+            font-size: 1rem;
             opacity: 0.8;
-            line-height: 1.4;
         }
 
-        .info-section {
-            margin-top: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
         }
 
-        .info-section h2 {
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-        }
-
-        .info-text {
-            font-size: 0.9rem;
-            line-height: 1.5;
-            opacity: 0.9;
-        }
-
-        .demo-scores {
-            margin-top: 1rem;
-            text-align: left;
-        }
-
-        .demo-score {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9rem;
-        }
-
-        .demo-score:last-child {
-            border-bottom: none;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 0.5rem;
-            }
-            
-            .games-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .game-card {
-                padding: 1rem;
-            }
-        }
-
-        @media (max-width: 400px) {
-            body {
-                padding: 10px;
-            }
-            
-            h1 {
-                font-size: 1.5rem;
-            }
-            
-            .subtitle {
-                font-size: 0.9rem;
-            }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 Discord Minigames</h1>
-        <p class="subtitle">Choose a game to play with your friends!</p>
-
-        <div class="games-grid">
-            <div class="game-card" onclick="loadGame('circus')">
-                <div class="game-icon">🎪</div>
-                <div class="game-title">Circus Game</div>
-                <div class="game-description">
-                    Bounce on the trampoline and pop colorful balloons! 
-                    Test your timing and coordination skills.
-                </div>
-            </div>
-            
-            <div class="game-card" onclick="loadGame('coming-soon')">
-                <div class="game-icon">🚧</div>
-                <div class="game-title">More Games Coming!</div>
-                <div class="game-description">
-                    We're working on more exciting minigames. 
-                    Stay tuned for updates!
-                </div>
-            </div>
-        </div>
-
-        <div class="info-section">
-            <h2>🏆 Demo High Scores</h2>
-            <div class="info-text">
-                <p>�� Ready to play! Click on a game above to get started.</p>
-                <p>📊 Live high scores will be available when connected to the server.</p>
-            </div>
-            <div class="demo-scores">
-                <div class="demo-score">
-                    <span>🥇 Player1</span>
-                    <span>150 points</span>
-                </div>
-                <div class="demo-score">
-                    <span>🥈 Player2</span>
-                    <span>120 points</span>
-                </div>
-                <div class="demo-score">
-                    <span>🥉 Player3</span>
-                    <span>95 points</span>
-                </div>
-            </div>
+    <!-- Loading Screen -->
+    <div class="loading" id="loadingScreen">
+        <div class="loading-content">
+            <h1>🎮 Discord Minigames</h1>
+            <div class="spinner"></div>
+            <p>Loading Phaser 3...</p>
         </div>
     </div>
 
-    <script>
-        // Check if we're in Discord iframe
-        const isDiscord = window.location.href.includes('discord.com') || 
-                         window.parent !== window || 
-                         window.location.href.includes('discordapp.com');
+    <!-- Game Container -->
+    <div id="gameContainer"></div>
 
-        // Game loading function
-        function loadGame(gameName) {
-            try {
-                if (gameName === 'circus') {
-                    // For Discord, show a message since direct navigation might not work
-                    if (isDiscord) {
-                        alert('🎪 Circus Game!\n\nBounce on the trampoline and pop balloons!\n\nNote: Full game experience available outside Discord.');
-                    } else {
-                        window.location.href = './circus/';
-                    }
-                } else if (gameName === 'coming-soon') {
-                    alert('🚧 More games are coming soon!\n\nStay tuned for exciting new minigames!');
-                }
-            } catch (error) {
-                console.error('Error loading game:', error);
-                alert('Unable to load game. Please try again.');
-            }
-        }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Discord Minigames loaded successfully');
-            
-            // Add some interactive feedback
-            const gameCards = document.querySelectorAll('.game-card');
-            gameCards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-3px) scale(1.02)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0) scale(1)';
-                });
-            });
-        });
-
-        // Handle Discord iframe specific issues
-        if (isDiscord) {
-            // Ensure the page loads properly in Discord
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('Running in Discord environment');
-                // Force a repaint to ensure content is visible
-                document.body.style.display = 'none';
-                document.body.offsetHeight; // Trigger reflow
-                document.body.style.display = 'flex';
-            });
-        }
-    </script>
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>
