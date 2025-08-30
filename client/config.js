@@ -3,17 +3,19 @@ const config = {
     development: {
       serverUrl: 'http://localhost:3001',
       apiEndpoint: '/api/token',
-      scoreEndpoint: '/api/score'
+      scoreEndpoint: '/api/score',
+      saveCharacterEndpoint: '/api/saveCharacter',
+      getUserCharactersEndpoint: '/api/characters/:discordUserId' 
     },
     production: {
       serverUrl: '/server',
       apiEndpoint: '/api/token',
-      scoreEndpoint: '/api/score'
+      scoreEndpoint: '/api/score',
+      saveCharacterEndpoint: '/api/saveCharacter',
+      getUserCharactersEndpoint: '/api/characters/:discordUserId'
     }
   };
-  
-  //https://awbreakout-production.up.railway.app
-  
+
   // Determine current environment
   const isDevelopment = window.location.hostname === 'localhost' || 
                        window.location.hostname === '127.0.0.1';
@@ -27,7 +29,9 @@ const config = {
   
   export const API_ENDPOINTS = {
     token: getApiUrl(currentConfig.apiEndpoint),
-    score: getApiUrl(currentConfig.scoreEndpoint)
+    score: getApiUrl(currentConfig.scoreEndpoint),
+    saveCharacter: getApiUrl(currentConfig.saveCharacterEndpoint),
+    getUserCharacters: getApiUrl(currentConfig.getUserCharactersEndpoint)
   };
   
   export default currentConfig;

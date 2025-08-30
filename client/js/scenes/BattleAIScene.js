@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { API_ENDPOINTS } from '../../config.js';
+
 
 export default class BattleAIScene extends Phaser.Scene {
     constructor() {
@@ -20,6 +22,9 @@ export default class BattleAIScene extends Phaser.Scene {
         
         // Load stats from localStorage
         this.loadBattleStats();
+        
+        // User characters cache
+        this.userCharacters = [];
     }
 
     preload() {
@@ -39,8 +44,8 @@ export default class BattleAIScene extends Phaser.Scene {
         // Create UI elements
         this.createUI();
         
-        // Initialize character creation
-        this.showCharacterCreation();
+        // Load user characters and initialize character creation
+        this.loadUserCharacters();
     }
 
     initializeGenAI() {
@@ -61,18 +66,18 @@ export default class BattleAIScene extends Phaser.Scene {
 
     getAPIKey() {
         // Debug logging
-        console.log('Environment check:', {
-            processEnv: process.env.GOOGLE_GENAI_API_KEY,
-            localStorage: localStorage.getItem('GOOGLE_GENAI_API_KEY'),
-            hasProcessEnv: !!process.env.GOOGLE_GENAI_API_KEY,
-            hasLocalStorage: !!localStorage.getItem('GOOGLE_GENAI_API_KEY')
-        });
+        // console.log('Environment check:', {
+        //     processEnv: process.env.GOOGLE_GENAI_API_KEY,
+        //     localStorage: localStorage.getItem('GOOGLE_GENAI_API_KEY'),
+        //     hasProcessEnv: !!process.env.GOOGLE_GENAI_API_KEY,
+        //     hasLocalStorage: !!localStorage.getItem('GOOGLE_GENAI_API_KEY')
+        // });
         
         // Try to get API key from environment variables first, then localStorage as fallback
-        // const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
-        //               localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
-        //               null;
-        const apiKey = null;
+        const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
+                      localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
+                      null;
+       //const apiKey = null;
 
         console.log('Final API key result:', apiKey ? 'Found' : 'Not found');
         return apiKey;
@@ -114,6 +119,48 @@ export default class BattleAIScene extends Phaser.Scene {
     getWinRate() {
         if (this.battleStats.totalBattles === 0) return 0;
         return Math.round((this.battleStats.wins / this.battleStats.totalBattles) * 100);
+    }
+
+    async loadUserCharacters() {
+        try {
+            // Get Discord user ID
+            const discordUserId = this.getDiscordUserId();
+            
+            console.log('🎭 Loading user characters for:', discordUserId);
+            const getUserCharactersUrl = API_ENDPOINTS.getUserCharacters.replace(':discordUserId', discordUserId);
+            const response = await fetch(`${getUserCharactersUrl}?limit=10`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success && result.characters) {
+                this.userCharacters = result.characters;
+                console.log(`✅ Loaded ${this.userCharacters.length} characters`);
+                
+                // Auto-fill with first character if available
+                if (this.userCharacters.length > 0) {
+                    const firstCharacter = this.userCharacters[0];
+                    this.playerCharacter = {
+                        name: firstCharacter.characterName,
+                        description: firstCharacter.description
+                    };
+                    console.log('🎭 Auto-filled with character:', firstCharacter.characterName);
+                }
+            } else {
+                console.log('⚠️ No characters found or failed to load:', result.error || 'Unknown error');
+                this.userCharacters = [];
+            }
+        } catch (error) {
+            console.error('❌ Error loading user characters:', error);
+            this.userCharacters = [];
+        }
+        
+        // Initialize character creation form (with auto-filled data if available)
+        this.showCharacterCreation();
     }
 
     createBackground() {
@@ -200,11 +247,18 @@ export default class BattleAIScene extends Phaser.Scene {
             color: '#ffffff'
         });
 
-        // Name input field (simulated with text)
-        this.nameText = this.add.text(centerX - 250, centerY - 50, 'Enter name here...', {
+        // Name input field (simulated with text) - auto-filled if character exists
+        const nameDisplayText = this.playerCharacter && this.playerCharacter.name 
+            ? this.playerCharacter.name 
+            : 'Enter name here...';
+        const nameColor = this.playerCharacter && this.playerCharacter.name 
+            ? '#ffffff' 
+            : '#cccccc';
+            
+        this.nameText = this.add.text(centerX - 250, centerY - 50, nameDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#cccccc',
+            color: nameColor,
             backgroundColor: '#2c3e50',
             padding: { x: 10, y: 8 }
         });
@@ -220,11 +274,18 @@ export default class BattleAIScene extends Phaser.Scene {
             color: '#ffffff'
         });
 
-        // Description input field (simulated with text)
-        this.descText = this.add.text(centerX - 250, centerY + 30, 'Enter description here...', {
+        // Description input field (simulated with text) - auto-filled if character exists
+        const descDisplayText = this.playerCharacter && this.playerCharacter.description 
+            ? this.playerCharacter.description 
+            : 'Enter description here...';
+        const descColor = this.playerCharacter && this.playerCharacter.description 
+            ? '#ffffff' 
+            : '#cccccc';
+            
+        this.descText = this.add.text(centerX - 250, centerY + 30, descDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#cccccc',
+            color: descColor,
             backgroundColor: '#2c3e50',
             padding: { x: 10, y: 8 },
             wordWrap: { width: 500 }
@@ -254,6 +315,23 @@ export default class BattleAIScene extends Phaser.Scene {
             color: '#ffffff',
             alpha: 0.7
         }).setOrigin(0.5);
+
+        // Character loading status
+        if (this.userCharacters.length > 0) {
+            this.add.text(centerX, centerY + 200, `✅ Auto-filled with your last character (${this.userCharacters.length} saved)`, {
+                fontSize: '12px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#2ecc71',
+                alpha: 0.8
+            }).setOrigin(0.5);
+        } else {
+            this.add.text(centerX, centerY + 200, '📝 No saved characters found - create your first character!', {
+                fontSize: '12px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#f39c12',
+                alpha: 0.8
+            }).setOrigin(0.5);
+        }
     }
 
     showAPIKeyInput() {
@@ -424,8 +502,8 @@ export default class BattleAIScene extends Phaser.Scene {
         overlay.fillStyle(0x000000, 0.8);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
-        const centerX = this.cameras.main.centerX;
-        const centerY = this.cameras.main.centerY;
+        const centerX = this.game.scale.displaySize.width / 2;
+        const centerY = this.game.scale.displaySize.height / 2;
 
         // Create modal background
         const modal = this.add.graphics();
@@ -442,22 +520,24 @@ export default class BattleAIScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Create RexUI InputText
-        const inputText = this.add.rexInputText(centerX - 150, centerY - 20, 300, 40, {
+        // Create RexUI InputText with current name value
+        const currentName = this.playerCharacter && this.playerCharacter.name ? this.playerCharacter.name : '';
+        let inputText = this.add.rexInputText(centerX-50, centerY + 20, 300, 40, {
             type: 'text',
             placeholder: 'Enter your character name...',
+            text: currentName, // Pre-fill with current name
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             backgroundColor: '#34495e',
             borderColor: '#3498db',
-            borderWidth: 2,
-            borderRadius: 8,
-            padding: { x: 10, y: 8 },
+            // borderWidth: 2,
+            // borderRadius: 8,
+            // padding: { x: 10, y: 8 },
             maxLength: 20,
             selectAll: true,
-            useDom: false
         });
+
 
         // Buttons
         const saveButton = this.add.text(centerX - 60, centerY + 40, 'Save', {
@@ -558,10 +638,12 @@ export default class BattleAIScene extends Phaser.Scene {
             alpha: 0.8
         }).setOrigin(0.5);
 
-        // Create RexUI InputText for multi-line description
-        const inputText = this.add.rexInputText(centerX - 200, centerY - 30, 400, 100, {
+        // Create RexUI InputText for multi-line description with current description value
+        const currentDescription = this.playerCharacter && this.playerCharacter.description ? this.playerCharacter.description : '';
+        const inputText = this.add.rexInputText(centerX - 50, centerY+30, 400, 100, {
             type: 'textarea',
             placeholder: 'Enter your character description...\n\nExample: A powerful warrior with lightning magic, wielding a legendary sword and wearing enchanted armor.',
+            text: currentDescription, // Pre-fill with current description
             fontSize: '14px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -652,7 +734,7 @@ export default class BattleAIScene extends Phaser.Scene {
         });
     }
 
-    startBattle() {
+    async startBattle() {
         if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
             this.showError('Please enter both name and description for your character!');
             return;
@@ -661,8 +743,62 @@ export default class BattleAIScene extends Phaser.Scene {
         this.isLoading = true;
         this.showLoadingScreen();
         
+        // Save character to server
+        await this.saveCharacterToServer();
+        
         // Generate AI opponent
         this.generateAIOpponent();
+    }
+
+    async saveCharacterToServer() {
+        try {
+            // Get Discord user ID (placeholder for now)
+            const discordUserId = this.getDiscordUserId();
+            
+            const characterData = {
+                characterName: this.playerCharacter.name,
+                description: this.playerCharacter.description,
+                discordUserId: discordUserId
+            };
+
+            console.log('🎭 Saving character to server:', characterData);
+
+            const response = await fetch(API_ENDPOINTS.saveCharacter, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Request-Id': `save_char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                },
+                body: JSON.stringify(characterData)
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ Character saved successfully:', result.character);
+            } else {
+                console.warn('⚠️ Character save failed:', result.error);
+            }
+        } catch (error) {
+            console.error('❌ Error saving character to server:', error);
+            // Don't block the battle if character saving fails
+        }
+    }
+
+    getDiscordUserId() {
+        // Try to get Discord user ID from DiscordManager
+        if (this.scene && this.scene.scene && this.scene.scene.get && this.scene.scene.get('MenuScene')) {
+            const menuScene = this.scene.scene.get('MenuScene');
+            if (menuScene.discordManager) {
+                const user = menuScene.discordManager.getCurrentUser();
+                if (user && user.id && user.id !== 'manual' && user.id !== 'test') {
+                    return user.id;
+                }
+            }
+        }
+        
+        // Fallback to a test user ID
+        return 'test_user_' + Math.random().toString(36).substr(2, 9);
     }
 
     generateAIOpponent() {

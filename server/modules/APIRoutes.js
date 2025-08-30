@@ -38,6 +38,11 @@ export class APIRoutes {
     app.get('/api/matchmaking/player/:playerName/stats', this.handleGetPlayerStats.bind(this));
     app.delete('/api/matchmaking/matches/:matchId', this.handleCancelMatch.bind(this));
     app.get('/api/matchmaking/stats', this.handleGetMatchmakingStats.bind(this));
+
+    // Character management endpoints
+    app.post('/api/saveCharacter', this.handleSaveCharacter.bind(this));
+    app.get('/api/characters/:discordUserId', this.handleGetUserCharacters.bind(this));
+
   }
 
   /**
@@ -307,6 +312,120 @@ export class APIRoutes {
     } catch (error) {
       console.error('❌ Error in token exchange:', error);
       this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle save character (Idempotent)
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleSaveCharacter(req, res) {
+    try {
+      const { characterName, description, discordUserId } = req.body;
+      
+      // Validate required fields
+      if (!characterName || !description || !discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required fields: characterName, description, and discordUserId are required');
+      }
+
+      // Validate character name length
+      if (characterName.trim().length === 0 || characterName.trim().length > 50) {
+        return this.sendErrorResponse(res, 400, 'Character name must be between 1 and 50 characters');
+      }
+
+      // Validate description length
+      if (description.trim().length === 0 || description.trim().length > 1000) {
+        return this.sendErrorResponse(res, 400, 'Description must be between 1 and 1000 characters');
+      }
+
+      // Generate idempotency key
+      const requestId = req.headers['x-request-id'] || 
+                       req.headers['x-idempotency-key'] || 
+                       `save_character:${discordUserId}_${characterName}_${Date.now()}`;
+      
+      const idempotencyKey = `character_save:${requestId}`;
+
+      // Check if this request was already processed
+      if (this.redisManager.isReady()) {
+        const existingResult = await this.redisManager.client.get(idempotencyKey);
+        if (existingResult) {
+          console.log(`🔄 Idempotency: Returning cached character save result for ${requestId}`);
+          return res.json(JSON.parse(existingResult));
+        }
+      }
+
+      console.log(`🎭 Saving character: ${characterName} for user ${discordUserId}`);
+
+      // Save character to Redis
+      const character = {
+        characterName: characterName.trim(),
+        description: description.trim(),
+        discordUserId: discordUserId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        id: `char_${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+
+      const result = await this.redisManager.saveCharacter(character);
+
+      if (result.success) {
+        const response = {
+          success: true,
+          message: 'Character saved successfully',
+          character: result.character
+        };
+        
+        // Cache the result for idempotency (expires in 1 hour)
+        if (this.redisManager.isReady()) {
+          await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
+        }
+        
+        res.json(response);
+      } else {
+        this.sendErrorResponse(res, 500, result.error || 'Failed to save character');
+      }
+
+    } catch (error) {
+      console.error('❌ Error saving character:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle get user characters
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetUserCharacters(req, res) {
+    try {
+      const { discordUserId } = req.params;
+      const limit = parseInt(req.query.limit) || 50;
+      
+      // Validate Discord user ID
+      if (!discordUserId || discordUserId.trim().length === 0) {
+        return this.sendErrorResponse(res, 400, 'Discord user ID is required');
+      }
+
+      // Validate limit
+      if (limit < 1 || limit > 100) {
+        return this.sendErrorResponse(res, 400, 'Limit must be between 1 and 100');
+      }
+
+      console.log(`🎭 Getting characters for user ${discordUserId}`);
+
+      const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), limit);
+      
+      res.json({
+        success: true,
+        discordUserId: discordUserId.trim(),
+        characters: characters,
+        count: characters.length,
+        limit: limit
+      });
+    } catch (error) {
+      console.error('❌ Error getting user characters:', error);
+      this.sendErrorResponse(res, 500, 'Failed to get user characters', error.message);
     }
   }
 

@@ -10,6 +10,8 @@ export class RedisManager {
     this.isConnected = false;
     this.HIGH_SCORES_KEY = 'minigames:high_scores';
     this.PLAYER_SCORES_KEY = 'minigames:player_scores';
+    this.CHARACTERS_KEY = 'minigames:characters';
+    this.USER_CHARACTERS_KEY = 'minigames:user_characters';
   }
 
   /**
@@ -244,6 +246,153 @@ export class RedisManager {
       isReady: this.isReady(),
       hasClient: !!this.client
     };
+  }
+
+  /**
+   * Save a character to Redis
+   * @param {Object} character - Character object
+   * @returns {Promise<Object>} Result object with success status
+   */
+  async saveCharacter(character) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, skipping character save');
+        return { success: false, error: 'Redis not available' };
+      }
+
+      // Check if Redis is actually connected
+      if (!this.client.isOpen) {
+        console.log('🔄 Redis connection not open, attempting to reconnect...');
+        try {
+          await this.client.connect();
+        } catch (reconnectError) {
+          console.log('❌ Failed to reconnect to Redis:', reconnectError.message);
+          return { success: false, error: 'Redis connection failed' };
+        }
+      }
+
+      // Save character data
+      const characterKey = `${this.CHARACTERS_KEY}:${character.id}`;
+      await this.client.set(characterKey, JSON.stringify(character));
+      
+      // Add to user's character list (sorted set by creation time)
+      const userCharactersKey = `${this.USER_CHARACTERS_KEY}:${character.discordUserId}`;
+      await this.client.zAdd(userCharactersKey, {
+        score: Date.now(),
+        value: character.id
+      });
+
+      // Keep only the latest 50 characters per user
+      await this.client.zRemRangeByRank(userCharactersKey, 0, -51);
+
+      console.log(`🎭 Character saved: ${character.characterName} for user ${character.discordUserId}`);
+      return { success: true, character: character };
+
+    } catch (error) {
+      console.error('❌ Error saving character:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get all characters for a specific Discord user
+   * @param {string} discordUserId - Discord user ID
+   * @param {number} limit - Maximum number of characters to retrieve
+   * @returns {Promise<Array>} Array of character objects
+   */
+  async getUserCharacters(discordUserId, limit = 50) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning empty characters list');
+        return [];
+      }
+
+      // Get character IDs for the user (most recent first)
+      const userCharactersKey = `${this.USER_CHARACTERS_KEY}:${discordUserId}`;
+      const characterIds = await this.client.zRange(userCharactersKey, 0, limit - 1, { REV: true });
+
+      if (characterIds.length === 0) {
+        return [];
+      }
+
+      // Get full character data
+      const characters = [];
+      for (const characterId of characterIds) {
+        const characterKey = `${this.CHARACTERS_KEY}:${characterId}`;
+        const characterData = await this.client.get(characterKey);
+        if (characterData) {
+          characters.push(JSON.parse(characterData));
+        }
+      }
+
+      console.log(`🎭 Retrieved ${characters.length} characters for user ${discordUserId}`);
+      return characters;
+
+    } catch (error) {
+      console.error('❌ Error getting user characters:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a specific character by ID
+   * @param {string} characterId - Character ID
+   * @returns {Promise<Object|null>} Character object or null
+   */
+  async getCharacterById(characterId) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning null for character');
+        return null;
+      }
+
+      const characterKey = `${this.CHARACTERS_KEY}:${characterId}`;
+      const characterData = await this.client.get(characterKey);
+      return characterData ? JSON.parse(characterData) : null;
+    } catch (error) {
+      console.error('❌ Error getting character:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete a character
+   * @param {string} characterId - Character ID
+   * @param {string} discordUserId - Discord user ID (for verification)
+   * @returns {Promise<Object>} Result object with success status
+   */
+  async deleteCharacter(characterId, discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, skipping character deletion');
+        return { success: false, error: 'Redis not available' };
+      }
+
+      // Get character to verify ownership
+      const character = await this.getCharacterById(characterId);
+      if (!character) {
+        return { success: false, error: 'Character not found' };
+      }
+
+      if (character.discordUserId !== discordUserId) {
+        return { success: false, error: 'Unauthorized to delete this character' };
+      }
+
+      // Delete character data
+      const characterKey = `${this.CHARACTERS_KEY}:${characterId}`;
+      await this.client.del(characterKey);
+      
+      // Remove from user's character list
+      const userCharactersKey = `${this.USER_CHARACTERS_KEY}:${discordUserId}`;
+      await this.client.zRem(userCharactersKey, characterId);
+
+      console.log(`🗑️  Character deleted: ${character.characterName} for user ${discordUserId}`);
+      return { success: true, message: 'Character deleted successfully' };
+
+    } catch (error) {
+      console.error('❌ Error deleting character:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
