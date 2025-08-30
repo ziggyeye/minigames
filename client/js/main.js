@@ -3,6 +3,10 @@ import MenuScene from './scenes/MenuScene.js';
 import CircusScene from './scenes/CircusScene.js';
 import BattleAIScene from './scenes/BattleAIScene.js';
 
+// Import RexUI plugins
+import RexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
+import InputTextPlugin from 'phaser3-rex-plugins/plugins/inputtext-plugin.js';
+
 // Check if we're in Discord iframe
 const isDiscord = window.location.href.includes('discord.com') || 
                  window.parent !== window || 
@@ -14,6 +18,9 @@ const config = {
     parent: 'gameContainer',
     width: 720,
     height: 1280,
+    dom: {
+        createContainer: true
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -34,6 +41,22 @@ const config = {
             gravity: { y: 300 },
             debug: false
         }
+    },
+    plugins: {
+        global: [
+            {
+                key: 'rexInputTextPlugin',
+                plugin: InputTextPlugin,
+                start: true
+            }
+        ],
+        scene: [
+            {
+                key: 'rexUI',
+                plugin: RexUIPlugin,
+                mapping: 'rexUI'
+            }
+        ]
     },
     scene: [MenuScene, CircusScene, BattleAIScene],
     backgroundColor: '#34495e',

@@ -257,12 +257,120 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showAPIKeyInput() {
-        const apiKey = prompt('Enter your Google GenAI API Key (optional):\n\nGet one from: https://makersuite.google.com/app/apikey\n\nLeave empty to use fallback battle generation.');
-        if (apiKey && apiKey.trim()) {
-            localStorage.setItem('GOOGLE_GENAI_API_KEY', apiKey.trim());
-            this.initializeGenAI();
-            this.showSuccess('API Key saved! AI battles will now use Google GenAI.');
-        }
+        // Create overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.8);
+        overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        // Create modal background
+        const modal = this.add.graphics();
+        modal.fillStyle(0x2c3e50, 0.95);
+        modal.fillRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
+        modal.lineStyle(2, 0xffffff, 0.3);
+        modal.strokeRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
+
+        // Title
+        const titleText = this.add.text(centerX, centerY - 120, '🔑 Enter Google GenAI API Key', {
+            fontSize: '24px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Instructions
+        const instructionsText = this.add.text(centerX, centerY - 80, 'Get your API key from: https://makersuite.google.com/app/apikey', {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            alpha: 0.8
+        }).setOrigin(0.5);
+
+        // Create RexUI InputText
+        const inputText = this.add.rexInputText(centerX - 200, centerY - 30, 400, 40, {
+            type: 'text',
+            placeholder: 'Enter your API key here...',
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#34495e',
+            borderColor: '#3498db',
+            borderWidth: 2,
+            borderRadius: 8,
+            padding: { x: 10, y: 8 },
+            maxLength: 100,
+            selectAll: true,
+            useDom: false
+        });
+
+        // Buttons
+        const saveButton = this.add.text(centerX - 80, centerY + 50, 'Save', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#27ae60',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        saveButton.setInteractive();
+
+        const cancelButton = this.add.text(centerX + 80, centerY + 50, 'Cancel', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#e74c3c',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        cancelButton.setInteractive();
+
+        // Event handlers
+        const cleanup = () => {
+            overlay.destroy();
+            modal.destroy();
+            titleText.destroy();
+            instructionsText.destroy();
+            inputText.destroy();
+            saveButton.destroy();
+            cancelButton.destroy();
+        };
+
+        // Handle Enter key
+        inputText.on('keydown-ENTER', () => {
+            const apiKey = inputText.text.trim();
+            if (apiKey) {
+                localStorage.setItem('GOOGLE_GENAI_API_KEY', apiKey);
+                this.initializeGenAI();
+                this.showSuccess('API Key saved! AI battles will now use Google GenAI.');
+            }
+            cleanup();
+        });
+
+        // Handle Escape key
+        inputText.on('keydown-ESC', cleanup);
+
+        saveButton.on('pointerdown', () => {
+            const apiKey = inputText.text.trim();
+            if (apiKey) {
+                localStorage.setItem('GOOGLE_GENAI_API_KEY', apiKey);
+                this.initializeGenAI();
+                this.showSuccess('API Key saved! AI battles will now use Google GenAI.');
+            }
+            cleanup();
+        });
+
+        cancelButton.on('pointerdown', cleanup);
+
+        // Focus the input by clicking on it
+        inputText.setInteractive();
+        inputText.on('pointerdown', () => {
+            inputText.setActive(true);
+        });
+        
+        // Auto-focus after a short delay
+        this.time.delayedCall(100, () => {
+            inputText.setActive(true);
+        });
     }
 
     showSuccess(message) {
@@ -311,24 +419,237 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showNameInput() {
-        const name = prompt('Enter your character name:');
-        if (name && name.trim()) {
-            this.playerCharacter = { name: name.trim(), description: '' };
-            this.nameText.setText(name.trim());
-            this.nameText.setColor('#ffffff');
-        }
+        // Create overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.8);
+        overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        // Create modal background
+        const modal = this.add.graphics();
+        modal.fillStyle(0x2c3e50, 0.95);
+        modal.fillRoundedRect(centerX - 200, centerY - 100, 400, 200, 15);
+        modal.lineStyle(2, 0xffffff, 0.3);
+        modal.strokeRoundedRect(centerX - 200, centerY - 100, 400, 200, 15);
+
+        // Title
+        const titleText = this.add.text(centerX, centerY - 70, '👤 Enter Character Name', {
+            fontSize: '24px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Create RexUI InputText
+        const inputText = this.add.rexInputText(centerX - 150, centerY - 20, 300, 40, {
+            type: 'text',
+            placeholder: 'Enter your character name...',
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#34495e',
+            borderColor: '#3498db',
+            borderWidth: 2,
+            borderRadius: 8,
+            padding: { x: 10, y: 8 },
+            maxLength: 20,
+            selectAll: true,
+            useDom: false
+        });
+
+        // Buttons
+        const saveButton = this.add.text(centerX - 60, centerY + 40, 'Save', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#27ae60',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        saveButton.setInteractive();
+
+        const cancelButton = this.add.text(centerX + 60, centerY + 40, 'Cancel', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#e74c3c',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        cancelButton.setInteractive();
+
+        // Event handlers
+        const cleanup = () => {
+            overlay.destroy();
+            modal.destroy();
+            titleText.destroy();
+            inputText.destroy();
+            saveButton.destroy();
+            cancelButton.destroy();
+        };
+
+        // Handle Enter key
+        inputText.on('keydown-ENTER', () => {
+            const name = inputText.text.trim();
+            if (name) {
+                this.playerCharacter = { name: name, description: '' };
+                this.nameText.setText(name);
+                this.nameText.setColor('#ffffff');
+            }
+            cleanup();
+        });
+
+        // Handle Escape key
+        inputText.on('keydown-ESC', cleanup);
+
+        saveButton.on('pointerdown', () => {
+            const name = inputText.text.trim();
+            if (name) {
+                this.playerCharacter = { name: name, description: '' };
+                this.nameText.setText(name);
+                this.nameText.setColor('#ffffff');
+            }
+            cleanup();
+        });
+
+        cancelButton.on('pointerdown', cleanup);
+
+        // Focus the input by clicking on it
+        inputText.setInteractive();
+        inputText.on('pointerdown', () => {
+            inputText.setActive(true);
+        });
+        
+        // Auto-focus after a short delay
+        this.time.delayedCall(100, () => {
+            inputText.setActive(true);
+        });
     }
 
     showDescriptionInput() {
-        const description = prompt('Enter your character description (powers, abilities, etc.):');
-        if (description && description.trim()) {
-            if (!this.playerCharacter) {
-                this.playerCharacter = { name: '', description: '' };
+        // Create overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.8);
+        overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        // Create modal background
+        const modal = this.add.graphics();
+        modal.fillStyle(0x2c3e50, 0.95);
+        modal.fillRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
+        modal.lineStyle(2, 0xffffff, 0.3);
+        modal.strokeRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
+
+        // Title
+        const titleText = this.add.text(centerX, centerY - 120, '📝 Enter Character Description', {
+            fontSize: '24px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Instructions
+        const instructionsText = this.add.text(centerX, centerY - 80, 'Describe your character\'s powers, abilities, weapons, etc.', {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            alpha: 0.8
+        }).setOrigin(0.5);
+
+        // Create RexUI InputText for multi-line description
+        const inputText = this.add.rexInputText(centerX - 200, centerY - 30, 400, 100, {
+            type: 'textarea',
+            placeholder: 'Enter your character description...\n\nExample: A powerful warrior with lightning magic, wielding a legendary sword and wearing enchanted armor.',
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#34495e',
+            borderColor: '#3498db',
+            borderWidth: 2,
+            borderRadius: 8,
+            padding: { x: 10, y: 8 },
+            maxLength: 500,
+            selectAll: true,
+            wrap: {
+                mode: 'word',
+                width: 380
             }
-            this.playerCharacter.description = description.trim();
-            this.descText.setText(description.trim());
-            this.descText.setColor('#ffffff');
-        }
+        });
+
+        // Buttons
+        const saveButton = this.add.text(centerX - 80, centerY + 80, 'Save', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#27ae60',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        saveButton.setInteractive();
+
+        const cancelButton = this.add.text(centerX + 80, centerY + 80, 'Cancel', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#e74c3c',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        cancelButton.setInteractive();
+
+        // Event handlers
+        const cleanup = () => {
+            overlay.destroy();
+            modal.destroy();
+            titleText.destroy();
+            instructionsText.destroy();
+            inputText.destroy();
+            saveButton.destroy();
+            cancelButton.destroy();
+        };
+
+        // Handle Ctrl+Enter key
+        inputText.on('keydown-CTRL+ENTER', () => {
+            const description = inputText.text.trim();
+            if (description) {
+                if (!this.playerCharacter) {
+                    this.playerCharacter = { name: '', description: '' };
+                }
+                this.playerCharacter.description = description;
+                this.descText.setText(description);
+                this.descText.setColor('#ffffff');
+            }
+            cleanup();
+        });
+
+        // Handle Escape key
+        inputText.on('keydown-ESC', cleanup);
+
+        saveButton.on('pointerdown', () => {
+            const description = inputText.text.trim();
+            if (description) {
+                if (!this.playerCharacter) {
+                    this.playerCharacter = { name: '', description: '' };
+                }
+                this.playerCharacter.description = description;
+                this.descText.setText(description);
+                this.descText.setColor('#ffffff');
+            }
+            cleanup();
+        });
+
+        cancelButton.on('pointerdown', cleanup);
+
+        // Focus the input by clicking on it
+        inputText.setInteractive();
+        inputText.on('pointerdown', () => {
+            inputText.setActive(true);
+        });
+        
+        // Auto-focus after a short delay
+        this.time.delayedCall(100, () => {
+            inputText.setActive(true);
+        });
     }
 
     startBattle() {

@@ -8,6 +8,7 @@ export default class MenuScene extends Phaser.Scene {
     preload() {
         // Load any assets needed for the menu
         this.load.image('background', '/assets/background.svg');
+        this.load.plugin('rexinputtextplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexinputtextplugin.min.js', true);
     }
 
     create() {
