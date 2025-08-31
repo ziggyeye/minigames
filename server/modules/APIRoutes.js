@@ -42,6 +42,9 @@ export class APIRoutes {
     // Character management endpoints
     app.post('/api/saveCharacter', this.handleSaveCharacter.bind(this));
     app.get('/api/characters/:discordUserId', this.handleGetUserCharacters.bind(this));
+    
+    // Battle simulation endpoint
+    app.post('/api/battle/simulate', this.handleBattleSimulation.bind(this));
 
   }
 
@@ -427,6 +430,265 @@ export class APIRoutes {
       console.error('❌ Error getting user characters:', error);
       this.sendErrorResponse(res, 500, 'Failed to get user characters', error.message);
     }
+  }
+
+  /**
+   * Handle battle simulation (Idempotent)
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleBattleSimulation(req, res) {
+    try {
+      const { playerCharacter, discordUserId } = req.body;
+      
+      // Validate required fields
+      if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
+        return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
+      }
+
+      // Generate idempotency key
+      const requestId = req.headers['x-request-id'] || 
+                       req.headers['x-idempotency-key'] || 
+                       `battle_sim:${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const idempotencyKey = `battle_simulation:${requestId}`;
+
+      // Check if this request was already processed
+      if (this.redisManager.isReady()) {
+        const existingResult = await this.redisManager.client.get(idempotencyKey);
+        if (existingResult) {
+          console.log(`🔄 Idempotency: Returning cached battle simulation result for ${requestId}`);
+          return res.json(JSON.parse(existingResult));
+        }
+      }
+
+      console.log(`⚔️ Simulating battle for character: ${playerCharacter.name}`);
+
+      // Generate AI opponent
+      const aiCharacter = this.selectRandomAICharacter();
+      
+      // Simulate battle
+      const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
+
+      const response = {
+        success: true,
+        playerCharacter: playerCharacter,
+        aiCharacter: aiCharacter,
+        battleResult: battleResult,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Cache the result for idempotency (expires in 1 hour)
+      if (this.redisManager.isReady()) {
+        await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
+      }
+      
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Error in battle simulation:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Select a random AI character for battle
+   * @returns {Object} AI character object
+   */
+  selectRandomAICharacter() {
+    const aiCharacters = [
+      {
+        name: "Shadow Blade",
+        description: "A mysterious ninja warrior with the ability to teleport through shadows. Master of stealth and assassination techniques. Wields dual katanas and can create shadow clones."
+      },
+      {
+        name: "Thunder Fist",
+        description: "A powerful martial artist who can channel electricity through his fists. His punches create thunderous shockwaves and can paralyze opponents. Master of lightning-fast strikes."
+      },
+      {
+        name: "Crystal Guardian",
+        description: "A mystical warrior made of living crystal. Can create impenetrable barriers and shoot crystal shards. Immune to most physical attacks and can regenerate from any damage."
+      },
+      {
+        name: "Flame Phoenix",
+        description: "A fire elemental with the ability to transform into a phoenix. Can control fire and heat, fly at incredible speeds, and resurrect from ashes. Master of fire magic."
+      },
+      {
+        name: "Iron Titan",
+        description: "A massive robot warrior with impenetrable armor. Can transform parts of its body into weapons and has superhuman strength. Immune to most conventional attacks."
+      },
+      {
+        name: "Frost Witch",
+        description: "An ice sorceress who can freeze enemies solid and create blizzards. Can walk on water by freezing it and summon ice elementals. Master of cold magic."
+      },
+      {
+        name: "Storm Rider",
+        description: "A wind elemental who can fly at supersonic speeds and create tornadoes. Can become intangible like mist and strike with hurricane-force winds."
+      },
+      {
+        name: "Earth Shaker",
+        description: "A giant stone warrior who can cause earthquakes and create rock barriers. Can merge with the ground and emerge anywhere. Master of earth magic."
+      }
+    ];
+
+    return aiCharacters[Math.floor(Math.random() * aiCharacters.length)];
+  }
+
+  /**
+   * Simulate battle between player and AI character
+   * @param {Object} playerCharacter - Player's character
+   * @param {Object} aiCharacter - AI character
+   * @returns {Promise<Object>} Battle result
+   */
+  async simulateBattle(playerCharacter, aiCharacter) {
+    try {
+      // Try to use Google GenAI if available
+      if (process.env.GOOGLE_GENAI_API_KEY) {
+        console.log('🤖 Using Google GenAI for battle simulation');
+        return await this.generateAIBattleResult(playerCharacter, aiCharacter);
+      } else {
+        console.log('⚔️ Using fallback battle generation');
+        return this.generateFallbackBattleResult(playerCharacter, aiCharacter);
+      }
+    } catch (error) {
+      console.error('❌ Error in AI battle generation, using fallback:', error);
+      return this.generateFallbackBattleResult(playerCharacter, aiCharacter);
+    }
+  }
+
+  /**
+   * Generate battle result using Google GenAI
+   * @param {Object} playerCharacter - Player's character
+   * @param {Object} aiCharacter - AI character
+   * @returns {Promise<Object>} Battle result
+   */
+  async generateAIBattleResult(playerCharacter, aiCharacter) {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `You are a creative battle narrator. Create a short, fun, and exciting battle description between two characters.
+
+Character 1: ${playerCharacter.name}
+Description: ${playerCharacter.description}
+
+Character 2: ${aiCharacter.name}
+Description: ${aiCharacter.description}
+
+Please write a short paragraph (2-3 sentences) describing an epic battle between these characters. Include:
+1. An exciting opening scene
+2. How their abilities interact
+3. Who wins and why (make it dramatic and fun)
+4. Keep it family-friendly and entertaining
+5. Put winner [WIN:{NAME}] and loser [LOSE:{NAME}] in the text
+
+Format your response as a single paragraph.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const battleText = response.text();
+
+    // Parse the AI response
+    return this.parseAIBattleResult(battleText, playerCharacter, aiCharacter);
+  }
+
+  /**
+   * Parse AI battle result and determine winner/loser
+   * @param {string} battleText - AI generated battle text
+   * @param {Object} playerCharacter - Player's character
+   * @param {Object} aiCharacter - AI character
+   * @returns {Object} Parsed battle result
+   */
+  parseAIBattleResult(battleText, playerCharacter, aiCharacter) {
+    console.log('Parsing AI battle result:', battleText);
+    
+    // Parse winner and loser from the text using [WIN:{NAME}] and [LOSE:{NAME}] format
+    const winMatch = battleText.match(/\[WIN:([^\]]+)\]/);
+    const loseMatch = battleText.match(/\[LOSE:([^\]]+)\]/);
+    
+    let winner, loser, result;
+    
+    if (winMatch && loseMatch) {
+      // Both winner and loser are specified in the text
+      const winnerName = winMatch[1].trim();
+      
+      // Determine which character matches the winner name
+      if (winnerName.toLowerCase() === playerCharacter.name.toLowerCase()) {
+        winner = playerCharacter;
+        loser = aiCharacter;
+        result = 'win';
+      } else if (winnerName.toLowerCase() === aiCharacter.name.toLowerCase()) {
+        winner = aiCharacter;
+        loser = playerCharacter;
+        result = 'loss';
+      } else {
+        // Fallback: winner name doesn't match either character
+        console.warn('Winner name from AI does not match any character, using random result');
+        const playerWins = Math.random() > 0.5;
+        winner = playerWins ? playerCharacter : aiCharacter;
+        loser = playerWins ? aiCharacter : playerCharacter;
+        result = playerWins ? 'win' : 'loss';
+      }
+    } else {
+      // Fallback: no clear winner/loser markers, use keyword detection
+      console.warn('No clear winner/loser markers found, using keyword detection');
+      const playerWins = battleText.toLowerCase().includes(playerCharacter.name.toLowerCase()) && 
+                        (battleText.toLowerCase().includes('win') || 
+                         battleText.toLowerCase().includes('victory') || 
+                         battleText.toLowerCase().includes('defeat') ||
+                         battleText.toLowerCase().includes('triumph'));
+      
+      winner = playerWins ? playerCharacter : aiCharacter;
+      loser = playerWins ? aiCharacter : playerCharacter;
+      result = playerWins ? 'win' : 'loss';
+    }
+
+    return {
+      scenario: "AI-Generated Battle",
+      winner: winner,
+      loser: loser,
+      description: battleText.trim(),
+      result: result
+    };
+  }
+
+  /**
+   * Generate fallback battle result when AI is not available
+   * @param {Object} playerCharacter - Player's character
+   * @param {Object} aiCharacter - AI character
+   * @returns {Object} Battle result
+   */
+  generateFallbackBattleResult(playerCharacter, aiCharacter) {
+    const battleScenarios = [
+      "The arena crackles with energy as the two warriors face off!",
+      "A fierce battle erupts in the mystical arena!",
+      "The ground trembles as these powerful beings clash!",
+      "Lightning and magic fill the air as the combatants engage!",
+      "An epic showdown begins between these legendary fighters!"
+    ];
+
+    const scenario = battleScenarios[Math.floor(Math.random() * battleScenarios.length)];
+    
+    // Randomly determine winner (50/50 chance)
+    const playerWins = Math.random() > 0.5;
+    const winner = playerWins ? playerCharacter : aiCharacter;
+    const loser = playerWins ? aiCharacter : playerCharacter;
+    const result = playerWins ? 'win' : 'loss';
+
+    const battleDescriptions = [
+      `${scenario} ${winner.name} demonstrates incredible skill, using their unique abilities to gain the upper hand. After an intense exchange, ${winner.name} emerges victorious!`,
+      `${scenario} The battle is fierce and evenly matched, but ${winner.name}'s unique abilities prove decisive. ${loser.name} puts up a valiant fight but ultimately falls to ${winner.name}'s superior tactics.`,
+      `${scenario} ${winner.name} showcases their mastery of combat, turning the tide of battle with their extraordinary powers. ${loser.name} fights bravely but cannot overcome ${winner.name}'s overwhelming strength.`
+    ];
+
+    return {
+      scenario: scenario,
+      winner: winner,
+      loser: loser,
+      description: battleDescriptions[Math.floor(Math.random() * battleDescriptions.length)],
+      result: result
+    };
   }
 
   /**

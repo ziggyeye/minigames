@@ -1,5 +1,3 @@
-import { DiscordManager } from '../DiscordManager.js';
-
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -32,8 +30,13 @@ export default class MenuScene extends Phaser.Scene {
 
     async initDiscord() {
         try {
-            this.discordManager = new DiscordManager();
-            await this.discordManager.initialize();
+            // Use the global DiscordManager instance
+            this.discordManager = window.globalDiscordManager;
+            
+            // Initialize if not already initialized
+            if (!this.discordManager.isInitialized) {
+                await this.discordManager.initialize();
+            }
 
             const playerName = this.discordManager.getCurrentUserName();
             console.log('Player name:', playerName);

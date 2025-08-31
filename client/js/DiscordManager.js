@@ -11,6 +11,7 @@ export class DiscordManager {
     this.currentUser = null;
     this.isDiscord = this.detectDiscordEnvironment();
     this.setupTimeout = null;
+    this.isInitialized = false;
   }
 
   /**
@@ -38,14 +39,21 @@ export class DiscordManager {
    * @returns {Promise<Object>} User object
    */
   async initialize() {
+    if (this.isInitialized) {
+      console.log("DiscordManager already initialized");
+      return this.currentUser;
+    }
+
     if (!this.isDiscord) {
       console.log("Running in local mode — Discord APIs disabled.");
       this.currentUser = { id: '123', username: 'TestUser' };
+      this.isInitialized = true;
       return this.currentUser;
     }
 
     console.log("Running in Discord mode — initializing SDK");
     await this.setupDiscordSDK();
+    this.isInitialized = true;
     return this.currentUser;
   }
 
@@ -209,3 +217,6 @@ export class DiscordManager {
     };
   }
 }
+
+// Default export for backward compatibility
+export default DiscordManager;

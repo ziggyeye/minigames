@@ -5,14 +5,16 @@ const config = {
       apiEndpoint: '/api/token',
       scoreEndpoint: '/api/score',
       saveCharacterEndpoint: '/api/saveCharacter',
-      getUserCharactersEndpoint: '/api/characters/:discordUserId' 
+      getUserCharactersEndpoint: '/api/characters/:discordUserId',
+      battleSimulationEndpoint: '/api/battle/simulate'
     },
     production: {
       serverUrl: '/server',
       apiEndpoint: '/api/token',
       scoreEndpoint: '/api/score',
       saveCharacterEndpoint: '/api/saveCharacter',
-      getUserCharactersEndpoint: '/api/characters/:discordUserId'
+      getUserCharactersEndpoint: '/api/characters/:discordUserId',
+      battleSimulationEndpoint: '/api/battle/simulate'
     }
   };
 
@@ -31,7 +33,8 @@ const config = {
     token: getApiUrl(currentConfig.apiEndpoint),
     score: getApiUrl(currentConfig.scoreEndpoint),
     saveCharacter: getApiUrl(currentConfig.saveCharacterEndpoint),
-    getUserCharacters: getApiUrl(currentConfig.getUserCharactersEndpoint)
+    getUserCharacters: getApiUrl(currentConfig.getUserCharactersEndpoint),
+    battleSimulation: getApiUrl(currentConfig.battleSimulationEndpoint)
   };
   
   export default currentConfig;

@@ -2,10 +2,14 @@ import Phaser from 'phaser';
 import MenuScene from './scenes/MenuScene.js';
 import CircusScene from './scenes/CircusScene.js';
 import BattleAIScene from './scenes/BattleAIScene.js';
+import { DiscordManager } from './DiscordManager.js';
 
 // Import RexUI plugins
 import RexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
 import InputTextPlugin from 'phaser3-rex-plugins/plugins/inputtext-plugin.js';
+
+// Create global DiscordManager instance
+window.globalDiscordManager = new DiscordManager();
 
 // Check if we're in Discord iframe
 const isDiscord = window.location.href.includes('discord.com') || 

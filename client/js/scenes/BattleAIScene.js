@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { API_ENDPOINTS } from '../../config.js';
 
 
@@ -9,8 +8,6 @@ export default class BattleAIScene extends Phaser.Scene {
         this.aiCharacter = null;
         this.battleResult = null;
         this.isLoading = false;
-        this.genAI = null;
-        this.model = null;
         
         // Battle statistics
         this.battleStats = {
@@ -33,11 +30,6 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     create() {
-
-
-        // Initialize Google GenAI
-        this.initializeGenAI();
-        
         // Create background
         this.createBackground();
         
@@ -48,40 +40,7 @@ export default class BattleAIScene extends Phaser.Scene {
         this.loadUserCharacters();
     }
 
-    initializeGenAI() {
-        try {
-            // Initialize Google GenAI with API key
-            const apiKey = this.getAPIKey();
-            if (apiKey) {
-                this.genAI = new GoogleGenerativeAI(apiKey);
-                this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                console.log('Google GenAI initialized successfully');
-            } else {
-                console.warn('Google GenAI API key not found, using fallback battle generation');
-            }
-        } catch (error) {
-            console.error('Failed to initialize Google GenAI:', error);
-        }
-    }
 
-    getAPIKey() {
-        // Debug logging
-        // console.log('Environment check:', {
-        //     processEnv: process.env.GOOGLE_GENAI_API_KEY,
-        //     localStorage: localStorage.getItem('GOOGLE_GENAI_API_KEY'),
-        //     hasProcessEnv: !!process.env.GOOGLE_GENAI_API_KEY,
-        //     hasLocalStorage: !!localStorage.getItem('GOOGLE_GENAI_API_KEY')
-        // });
-        
-        // Try to get API key from environment variables first, then localStorage as fallback
-        const apiKey = process.env.GOOGLE_GENAI_API_KEY || 
-                      localStorage.getItem('GOOGLE_GENAI_API_KEY') || 
-                      null;
-       //const apiKey = null;
-
-        console.log('Final API key result:', apiKey ? 'Found' : 'Not found');
-        return apiKey;
-    }
 
     loadBattleStats() {
         try {
@@ -225,20 +184,7 @@ export default class BattleAIScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // API Key button (if not set)
-        // if (!this.getAPIKey()) {
-        //     const apiKeyButton = this.add.text(centerX + 200, centerY - 150, '🔑 Set API Key', {
-        //         fontSize: '14px',
-        //         fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-        //         color: '#ffffff',
-        //         backgroundColor: '#f39c12',
-        //         padding: { x: 8, y: 4 }
-        //     });
-        //     apiKeyButton.setInteractive();
-        //     apiKeyButton.on('pointerdown', () => {
-        //         this.showAPIKeyInput();
-        //     });
-        // }
+        // Server handles AI integration - no API key needed on client
 
         // Name input label
         this.add.text(centerX - 250, centerY - 80, 'Character Name:', {
@@ -334,122 +280,7 @@ export default class BattleAIScene extends Phaser.Scene {
         }
     }
 
-    showAPIKeyInput() {
-        // Create overlay
-        const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.8);
-        overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
-        const centerX = this.cameras.main.centerX;
-        const centerY = this.cameras.main.centerY;
-
-        // Create modal background
-        const modal = this.add.graphics();
-        modal.fillStyle(0x2c3e50, 0.95);
-        modal.fillRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
-        modal.lineStyle(2, 0xffffff, 0.3);
-        modal.strokeRoundedRect(centerX - 250, centerY - 150, 500, 300, 15);
-
-        // Title
-        const titleText = this.add.text(centerX, centerY - 120, '🔑 Enter Google GenAI API Key', {
-            fontSize: '24px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        // Instructions
-        const instructionsText = this.add.text(centerX, centerY - 80, 'Get your API key from: https://makersuite.google.com/app/apikey', {
-            fontSize: '14px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            alpha: 0.8
-        }).setOrigin(0.5);
-
-        // Create RexUI InputText
-        const inputText = this.add.rexInputText(centerX - 200, centerY - 30, 400, 40, {
-            type: 'text',
-            placeholder: 'Enter your API key here...',
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#34495e',
-            borderColor: '#3498db',
-            borderWidth: 2,
-            borderRadius: 8,
-            padding: { x: 10, y: 8 },
-            maxLength: 100,
-            selectAll: true,
-            useDom: false
-        });
-
-        // Buttons
-        const saveButton = this.add.text(centerX - 80, centerY + 50, 'Save', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#27ae60',
-            padding: { x: 20, y: 8 }
-        }).setOrigin(0.5);
-        saveButton.setInteractive();
-
-        const cancelButton = this.add.text(centerX + 80, centerY + 50, 'Cancel', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#e74c3c',
-            padding: { x: 20, y: 8 }
-        }).setOrigin(0.5);
-        cancelButton.setInteractive();
-
-        // Event handlers
-        const cleanup = () => {
-            overlay.destroy();
-            modal.destroy();
-            titleText.destroy();
-            instructionsText.destroy();
-            inputText.destroy();
-            saveButton.destroy();
-            cancelButton.destroy();
-        };
-
-        // Handle Enter key
-        inputText.on('keydown-ENTER', () => {
-            const apiKey = inputText.text.trim();
-            if (apiKey) {
-                localStorage.setItem('GOOGLE_GENAI_API_KEY', apiKey);
-                this.initializeGenAI();
-                this.showSuccess('API Key saved! AI battles will now use Google GenAI.');
-            }
-            cleanup();
-        });
-
-        // Handle Escape key
-        inputText.on('keydown-ESC', cleanup);
-
-        saveButton.on('pointerdown', () => {
-            const apiKey = inputText.text.trim();
-            if (apiKey) {
-                localStorage.setItem('GOOGLE_GENAI_API_KEY', apiKey);
-                this.initializeGenAI();
-                this.showSuccess('API Key saved! AI battles will now use Google GenAI.');
-            }
-            cleanup();
-        });
-
-        cancelButton.on('pointerdown', cleanup);
-
-        // Focus the input by clicking on it
-        inputText.setInteractive();
-        inputText.on('pointerdown', () => {
-            inputText.setActive(true);
-        });
-        
-        // Auto-focus after a short delay
-        this.time.delayedCall(100, () => {
-            inputText.setActive(true);
-        });
-    }
 
     showSuccess(message) {
         // Create success modal
@@ -746,8 +577,8 @@ export default class BattleAIScene extends Phaser.Scene {
         // Save character to server
         await this.saveCharacterToServer();
         
-        // Generate AI opponent
-        this.generateAIOpponent();
+        // Simulate battle on server
+        await this.simulateBattle();
     }
 
     async saveCharacterToServer() {
@@ -786,14 +617,11 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     getDiscordUserId() {
-        // Try to get Discord user ID from DiscordManager
-        if (this.scene && this.scene.scene && this.scene.scene.get && this.scene.scene.get('MenuScene')) {
-            const menuScene = this.scene.scene.get('MenuScene');
-            if (menuScene.discordManager) {
-                const user = menuScene.discordManager.getCurrentUser();
-                if (user && user.id && user.id !== 'manual' && user.id !== 'test') {
-                    return user.id;
-                }
+        // Try to get Discord user ID from global DiscordManager
+        if (window.globalDiscordManager && window.globalDiscordManager.isInitialized) {
+            const user = window.globalDiscordManager.getCurrentUser();
+            if (user && user.id && user.id !== 'manual' && user.id !== 'test') {
+                return user.id;
             }
         }
         
@@ -801,184 +629,54 @@ export default class BattleAIScene extends Phaser.Scene {
         return 'test_user_' + Math.random().toString(36).substr(2, 9);
     }
 
-    generateAIOpponent() {
-        const aiCharacters = [
-            {
-                name: "Shadow Blade",
-                description: "A mysterious ninja warrior with the ability to teleport through shadows. Master of stealth and assassination techniques. Wields dual katanas and can create shadow clones."
-            },
-            {
-                name: "Thunder Fist",
-                description: "A powerful martial artist who can channel electricity through his fists. His punches create thunderous shockwaves and can paralyze opponents. Master of lightning-fast strikes."
-            },
-            {
-                name: "Crystal Guardian",
-                description: "A mystical warrior made of living crystal. Can create impenetrable barriers and shoot crystal shards. Immune to most physical attacks and can regenerate from any damage."
-            },
-            {
-                name: "Flame Phoenix",
-                description: "A fire elemental with the ability to transform into a phoenix. Can control fire and heat, fly at incredible speeds, and resurrect from ashes. Master of fire magic."
-            },
-            {
-                name: "Iron Titan",
-                description: "A massive robot warrior with impenetrable armor. Can transform parts of its body into weapons and has superhuman strength. Immune to most conventional attacks."
-            }
-        ];
-
-        this.aiCharacter = aiCharacters[Math.floor(Math.random() * aiCharacters.length)];
-        
-        // Simulate battle with AI
-        this.simulateBattle();
-    }
-
-    simulateBattle() {
-        if (this.model) {
-            // Use Google GenAI to generate battle result
-            this.generateAIBattleResult();
-        } else {
-            // Fallback to local generation
-            setTimeout(() => {
-                this.generateBattleResult();
-            }, 2000);
-        }
-    }
-
-    async generateAIBattleResult() {
+    async simulateBattle() {
         try {
-            const prompt = this.createBattlePrompt();
+            // Get Discord user ID
+            const discordUserId = this.getDiscordUserId();
             
-            const result = await this.model.generateContent(prompt);
-            const response = await result.response;
-            const battleText = response.text();
-            console.log(battleText);
-            // Parse the AI response
-            this.parseAIBattleResult(battleText);
+            console.log('⚔️ Requesting battle simulation from server...');
+
+            const response = await fetch(API_ENDPOINTS.battleSimulation, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Request-Id': `battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                },
+                body: JSON.stringify({
+                    playerCharacter: this.playerCharacter,
+                    discordUserId: discordUserId
+                })
+            });
+
+            const result = await response.json();
             
-        } catch (error) {
-            console.error('Error generating AI battle result:', error);
-            // Fallback to local generation
-            this.generateBattleResult();
-        }
-    }
+            if (result.success) {
+                console.log('✅ Battle simulation completed:', result);
+                
+                // Set the AI character from server response
+                this.aiCharacter = result.aiCharacter;
+                
+                // Set the battle result from server response
+                this.battleResult = result.battleResult;
 
-    createBattlePrompt() {
-        return `You are a creative battle narrator. Create a short, fun, and exciting battle description between two characters.
+                // Update battle statistics
+                this.updateBattleStats(result.battleResult.result);
 
-Character 1: ${this.playerCharacter.name}
-Description: ${this.playerCharacter.description}
-
-Character 2: ${this.aiCharacter.name}
-Description: ${this.aiCharacter.description}
-
-Please write a short paragraph (2-3 sentences) describing an epic battle between these characters. Include:
-1. An exciting opening scene
-2. How their abilities interact
-3. Who wins and why (make it dramatic and fun)
-4. Keep it family-friendly and entertaining
-5. Put winner [WIN:{NAME}] and loser [LOSE:{NAME}] in the text
-
-Format your response as a single paragraph.`;
-    }
-
-    parseAIBattleResult(battleText) {
-        console.log('Parsing AI battle result:', battleText);
-        
-        // Parse winner and loser from the text using [WIN:{NAME}] and [LOSE:{NAME}] format
-        const winMatch = battleText.match(/\[WIN:([^\]]+)\]/);
-        const loseMatch = battleText.match(/\[LOSE:([^\]]+)\]/);
-        
-        let winner, loser;
-        
-        if (winMatch && loseMatch) {
-            // Both winner and loser are specified in the text
-            const winnerName = winMatch[1].trim();
-            const loserName = loseMatch[1].trim();
-            
-            // Determine which character matches the winner name
-            if (winnerName.toLowerCase() === this.playerCharacter.name.toLowerCase()) {
-                winner = this.playerCharacter;
-                loser = this.aiCharacter;
-            } else if (winnerName.toLowerCase() === this.aiCharacter.name.toLowerCase()) {
-                winner = this.aiCharacter;
-                loser = this.playerCharacter;
+                this.isLoading = false;
+                this.showBattleResult();
             } else {
-                // Fallback: winner name doesn't match either character
-                console.warn('Winner name from AI does not match any character, using fallback logic');
-                winner = this.playerCharacter;
-                loser = this.aiCharacter;
+                console.error('❌ Battle simulation failed:', result.error);
+                this.showError('Battle simulation failed. Please try again.');
+                this.isLoading = false;
             }
-        } else {
-            // Fallback: no clear winner/loser markers, use keyword detection
-            console.warn('No clear winner/loser markers found, using keyword detection');
-            const playerWins = battleText.toLowerCase().includes(this.playerCharacter.name.toLowerCase()) && 
-                              (battleText.toLowerCase().includes('win') || 
-                               battleText.toLowerCase().includes('victory') || 
-                               battleText.toLowerCase().includes('defeat') ||
-                               battleText.toLowerCase().includes('triumph'));
-            
-            winner = playerWins ? this.playerCharacter : this.aiCharacter;
-            loser = playerWins ? this.aiCharacter : this.playerCharacter;
+        } catch (error) {
+            console.error('❌ Error requesting battle simulation:', error);
+            this.showError('Failed to connect to battle server. Please try again.');
+            this.isLoading = false;
         }
-
-        this.battleResult = {
-            scenario: "AI-Generated Battle",
-            winner: winner,
-            loser: loser,
-            description: battleText.trim()
-        };
-
-        // Update battle statistics
-        const result = winner === this.playerCharacter ? 'win' : 'loss';
-        this.updateBattleStats(result);
-
-        console.log('Parsed battle result:', {
-            winner: winner.name,
-            loser: loser.name,
-            description: battleText.trim(),
-            result: result
-        });
-
-        this.isLoading = false;
-        this.showBattleResult();
     }
 
-    generateBattleResult() {
-        // Fallback battle generation when AI is not available
-        const battleScenarios = [
-            "The arena crackles with energy as the two warriors face off!",
-            "A fierce battle erupts in the mystical arena!",
-            "The ground trembles as these powerful beings clash!",
-            "Lightning and magic fill the air as the combatants engage!",
-            "An epic showdown begins between these legendary fighters!"
-        ];
 
-        const scenario = battleScenarios[Math.floor(Math.random() * battleScenarios.length)];
-        
-        // Randomly determine winner (50/50 chance)
-        const playerWins = Math.random() > 0.5;
-        const winner = playerWins ? this.playerCharacter : this.aiCharacter;
-        const loser = playerWins ? this.aiCharacter : this.playerCharacter;
-
-        const battleDescriptions = [
-            `${scenario} ${winner.name} demonstrates incredible skill, using ${winner.description.toLowerCase().split(' ').slice(0, 5).join(' ')} to gain the upper hand. After an intense exchange, ${winner.name} emerges victorious!`,
-            `${scenario} The battle is fierce and evenly matched, but ${winner.name}'s unique abilities prove decisive. ${loser.name} puts up a valiant fight but ultimately falls to ${winner.name}'s superior tactics.`,
-            `${scenario} ${winner.name} showcases their mastery of combat, turning the tide of battle with their extraordinary powers. ${loser.name} fights bravely but cannot overcome ${winner.name}'s overwhelming strength.`
-        ];
-
-        this.battleResult = {
-            scenario: scenario,
-            winner: winner,
-            loser: loser,
-            description: battleDescriptions[Math.floor(Math.random() * battleDescriptions.length)]
-        };
-
-        // Update battle statistics
-        const result = winner === this.playerCharacter ? 'win' : 'loss';
-        this.updateBattleStats(result);
-
-        this.isLoading = false;
-        this.showBattleResult();
-    }
 
     showLoadingScreen() {
         // Clear previous content
@@ -990,7 +688,7 @@ Format your response as a single paragraph.`;
         const centerY = this.cameras.main.centerY;
 
         // Loading text
-        const loadingText = this.model ? '🤖 AI Battle Analysis...' : '⚔️ Preparing Battle...';
+        const loadingText = '🤖 Server Battle Analysis...';
         this.add.text(centerX, centerY - 50, loadingText, {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
@@ -1013,9 +711,7 @@ Format your response as a single paragraph.`;
         });
 
         // Loading text
-        const statusText = this.model ? 
-            'Google GenAI is analyzing the combatants and generating an epic battle...' : 
-            'Generating battle scenario...';
+        const statusText = 'Server is selecting an AI opponent and generating an epic battle...';
         this.add.text(centerX, centerY + 100, statusText, {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
@@ -1253,12 +949,12 @@ Format your response as a single paragraph.`;
         this.scene.restart();
     }
 
-    startNewBattle() {
-        // Keep the same player character but generate a new AI opponent
+    async startNewBattle() {
+        // Keep the same player character but request a new battle from server
         this.isLoading = true;
         this.showLoadingScreen();
         
-        // Generate new AI opponent
-        this.generateAIOpponent();
+        // Simulate new battle on server
+        await this.simulateBattle();
     }
 }
