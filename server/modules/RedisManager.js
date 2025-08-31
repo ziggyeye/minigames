@@ -12,6 +12,7 @@ export class RedisManager {
     this.PLAYER_SCORES_KEY = 'minigames:player_scores';
     this.CHARACTERS_KEY = 'minigames:characters';
     this.USER_CHARACTERS_KEY = 'minigames:user_characters';
+    this.BATTLE_STATS_KEY = 'minigames:battle_stats';
   }
 
   /**
@@ -392,6 +393,130 @@ export class RedisManager {
     } catch (error) {
       console.error('❌ Error deleting character:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Update battle statistics for a user
+   * @param {string} discordUserId - Discord user ID
+   * @param battleResult
+   * @returns {Promise<Object>} Updated battle statistics
+   */
+  async updateBattleStats(discordUserId, battleResult, playerCharacter) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping battle stats update');
+        return this.getDefaultBattleStats();
+      }
+
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}`;
+      
+      // Get current stats or initialize
+      const currentStats = await this.getBattleStats(discordUserId);
+      
+      // Update stats based on battle result
+      const updatedStats = {
+        totalBattles: currentStats.totalBattles + 1,
+        wins: currentStats.wins + (battleResult.winner.name === playerCharacter.name ? 1 : 0),
+        losses: currentStats.losses + (battleResult.loser.name === playerCharacter.name ? 1 : 0),
+   //     ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
+        lastBattleDate: new Date().toISOString()
+      };
+      
+      // Calculate win rate
+      updatedStats.winRate = updatedStats.totalBattles > 0 
+        ? Math.round((updatedStats.wins / updatedStats.totalBattles) * 100) 
+        : 0;
+      
+      // Save updated stats
+      await this.client.hSet(statsKey, updatedStats);
+      
+      console.log(`📊 Battle stats updated for ${discordUserId}: ${playerCharacter.name} - ${updatedStats.wins}W/${updatedStats.losses}L (${updatedStats.winRate}%)`);
+      
+      return updatedStats;
+
+    } catch (error) {
+      console.error('❌ Error updating battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Get battle statistics for a user
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<Object>} Battle statistics
+   */
+  async getBattleStats(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, returning default battle stats');
+        return this.getDefaultBattleStats();
+      }
+
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}`;
+      const stats = await this.client.hGetAll(statsKey);
+      
+      if (!stats || Object.keys(stats).length === 0) {
+        return this.getDefaultBattleStats();
+      }
+      
+      // Convert string values to numbers and calculate win rate
+      const battleStats = {
+        totalBattles: parseInt(stats.totalBattles) || 0,
+        wins: parseInt(stats.wins) || 0,
+        losses: parseInt(stats.losses) || 0,
+        ties: parseInt(stats.ties) || 0,
+        lastBattleDate: stats.lastBattleDate || null
+      };
+      
+      battleStats.winRate = battleStats.totalBattles > 0 
+        ? Math.round((battleStats.wins / battleStats.totalBattles) * 100) 
+        : 0;
+      
+      return battleStats;
+
+    } catch (error) {
+      console.error('❌ Error getting battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Get default battle statistics
+   * @returns {Object} Default battle stats
+   */
+  getDefaultBattleStats() {
+    return {
+      totalBattles: 0,
+      wins: 0,
+      losses: 0,
+      ties: 0,
+      winRate: 0,
+      lastBattleDate: null
+    };
+  }
+
+  /**
+   * Reset battle statistics for a user (for testing/admin purposes)
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<boolean>} True if reset successful
+   */
+  async resetBattleStats(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, cannot reset battle stats');
+        return false;
+      }
+
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}`;
+      await this.client.del(statsKey);
+      
+      console.log(`🔄 Battle stats reset for user ${discordUserId}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error resetting battle stats:', error);
+      return false;
     }
   }
 

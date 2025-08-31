@@ -45,6 +45,9 @@ export class APIRoutes {
     
     // Battle simulation endpoint
     app.post('/api/battle/simulate', this.handleBattleSimulation.bind(this));
+    
+    // Battle statistics endpoints
+    app.get('/api/battle/stats/:discordUserId', this.handleGetBattleStats.bind(this));
 
   }
 
@@ -470,11 +473,15 @@ export class APIRoutes {
       // Simulate battle
       const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
 
+      // Update battle statistics
+      const battleStats = await this.redisManager.updateBattleStats(discordUserId, battleResult, playerCharacter);
+
       const response = {
         success: true,
         playerCharacter: playerCharacter,
         aiCharacter: aiCharacter,
         battleResult: battleResult,
+        battleStats: battleStats,
         timestamp: new Date().toISOString()
       };
       
@@ -583,6 +590,7 @@ Please write a short paragraph (2-3 sentences) describing an epic battle between
 4. Keep it family-friendly and entertaining
 5. Resonpose should be in json format. Add "result" field and a "winner" and "loser" field.
 6. No ties
+7. Do NOT change the character names or descriptions. Keep the casing the same.
 
 Format your result as a single paragraph.`;
 
@@ -612,10 +620,28 @@ Format your result as a single paragraph.`;
     const winMatch = json.winner;
     const loseMatch = json.loser;
     
+    // check name formatting
+    let winner = winMatch;
+    let loser = loseMatch;
+    if (winMatch.toLowerCase() === playerCharacter.name.toLowerCase()) {
+      winner = playerCharacter;
+    }
+    if (winMatch.toLowerCase() === aiCharacter.name.toLowerCase()) {
+      winner = aiCharacter;
+    }
+
+    if (loseMatch.toLowerCase() === aiCharacter.name.toLowerCase()) {
+      loser = aiCharacter;
+    }
+    if (loseMatch.toLowerCase() === playerCharacter.name.toLowerCase()) {
+      loser = playerCharacter;
+    }
+
+
     return {
       scenario: "AI-Generated Battle",
-      winner: winMatch,
-      loser: loseMatch,
+      winner: winner,
+      loser: loser,
       description: json.result.trim(),
     };
   }
@@ -656,6 +682,40 @@ Format your result as a single paragraph.`;
       description: battleDescriptions[Math.floor(Math.random() * battleDescriptions.length)],
       result: result
     };
+  }
+
+  /**
+   * Handle get battle statistics
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetBattleStats(req, res) {
+    try {
+      const { discordUserId } = req.params;
+      
+      // Validate Discord user ID
+      if (!discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required parameter: discordUserId');
+      }
+
+      console.log(`📊 Getting battle statistics for user: ${discordUserId}`);
+
+      // Get battle statistics from Redis
+      const battleStats = await this.redisManager.getBattleStats(discordUserId);
+
+      const response = {
+        success: true,
+        discordUserId: discordUserId,
+        battleStats: battleStats,
+        timestamp: new Date().toISOString()
+      };
+      
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Error getting battle statistics:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
   }
 
   /**

@@ -9,16 +9,14 @@ export default class BattleAIScene extends Phaser.Scene {
         this.battleResult = null;
         this.isLoading = false;
         
-        // Battle statistics
+        // Battle statistics (will be loaded from server)
         this.battleStats = {
             totalBattles: 0,
             wins: 0,
             losses: 0,
-            ties: 0
+            ties: 0,
+            winRate: 0
         };
-        
-        // Load stats from localStorage
-        this.loadBattleStats();
         
         // User characters cache
         this.userCharacters = [];
@@ -38,46 +36,37 @@ export default class BattleAIScene extends Phaser.Scene {
         
         // Load user characters and initialize character creation
         this.loadUserCharacters();
+        
+        // Optionally load battle statistics for display
+        this.loadBattleStatsFromServer();
     }
 
 
 
-    loadBattleStats() {
+
+
+    async loadBattleStatsFromServer() {
         try {
-            const savedStats = localStorage.getItem('battleStats');
-            if (savedStats) {
-                this.battleStats = JSON.parse(savedStats);
+            const discordUserId = this.getDiscordUserId();
+            console.log('📊 Loading battle statistics from server for:', discordUserId);
+
+            const getBattleStatsUrl = API_ENDPOINTS.battleStats.replace(':discordUserId', discordUserId);
+            const response = await fetch(getBattleStatsUrl, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await response.json();
+            
+            if (result.success && result.battleStats) {
+                this.battleStats = result.battleStats;
+                console.log('✅ Battle statistics loaded:', this.battleStats);
+            } else {
+                console.log('ℹ️  No battle statistics found, using defaults');
             }
         } catch (error) {
-            console.error('Error loading battle stats:', error);
+            console.error('❌ Error loading battle statistics:', error);
+            // Keep default stats on error
         }
-    }
-
-    saveBattleStats() {
-        try {
-            localStorage.setItem('battleStats', JSON.stringify(this.battleStats));
-        } catch (error) {
-            console.error('Error saving battle stats:', error);
-        }
-    }
-
-    updateBattleStats(result) {
-        this.battleStats.totalBattles++;
-        
-        if (result === 'win') {
-            this.battleStats.wins++;
-        } else if (result === 'loss') {
-            this.battleStats.losses++;
-        } else if (result === 'tie') {
-            this.battleStats.ties++;
-        }
-        
-        this.saveBattleStats();
-    }
-
-    getWinRate() {
-        if (this.battleStats.totalBattles === 0) return 0;
-        return Math.round((this.battleStats.wins / this.battleStats.totalBattles) * 100);
     }
 
     async loadUserCharacters() {
@@ -716,8 +705,19 @@ export default class BattleAIScene extends Phaser.Scene {
                 // Set the battle result from server response
                 this.battleResult = result.battleResult;
 
-                // Update battle statistics
-                this.updateBattleStats(result.battleResult.result);
+                // Update battle statistics from server response
+                if (result.battleStats) {
+                    this.battleStats = result.battleStats;
+                } else {
+                    // Fallback to default stats if server doesn't provide them
+                    this.battleStats = {
+                        totalBattles: 0,
+                        wins: 0,
+                        losses: 0,
+                        ties: 0,
+                        winRate: 0
+                    };
+                }
 
                 this.isLoading = false;
                 this.showBattleResult();
@@ -848,14 +848,15 @@ export default class BattleAIScene extends Phaser.Scene {
         const outcomeY = descY + descText.height + 60;
         
         // Skull emoji for defeat
-        const skullEmoji = this.battleResult.winner === this.playerCharacter ? '🎉' : '💀';
+        const skullEmoji = this.battleResult.winner.name === this.playerCharacter.name    ? '🎉' : '💀';
         this.add.text(centerX, outcomeY, skullEmoji, {
             fontSize: '48px'
         }).setOrigin(0.5);
 
+        console.log('player character:', this.playerCharacter.name);
         // Outcome text
-        const outcomeText = this.battleResult.winner === this.playerCharacter ? 'Victory' : 'Defeat';
-        const outcomeColor = this.battleResult.winner === this.playerCharacter ? '#2ecc71' : '#e74c3c';
+        const outcomeText = this.battleResult.winner.name === this.playerCharacter.name ? 'Victory' : 'Defeat';
+        const outcomeColor = this.battleResult.winner.name === this.playerCharacter.name ? '#2ecc71' : '#e74c3c';
         
         this.add.text(centerX, outcomeY + 60, outcomeText, {
             fontSize: '36px',
@@ -889,7 +890,7 @@ export default class BattleAIScene extends Phaser.Scene {
             color: '#ffffff'
         });
 
-        this.add.text(centerX + 50, statsY + 30, `Win Rate: ${this.getWinRate()}%`, {
+        this.add.text(centerX + 50, statsY + 30, `Win Rate: ${this.battleStats.winRate}%`, {
             fontSize: '14px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#2ecc71',
@@ -909,11 +910,11 @@ export default class BattleAIScene extends Phaser.Scene {
             color: '#e74c3c'
         });
 
-        this.add.text(centerX + 50, statsY + 50, `T: ${this.battleStats.ties}`, {
-            fontSize: '14px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#f39c12'
-        });
+        // this.add.text(centerX + 50, statsY + 50, `T: ${this.battleStats.ties}`, {
+        //     fontSize: '14px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#f39c12'
+        // });
 
         // Battle again button
         const buttonY = statsY + 100;
