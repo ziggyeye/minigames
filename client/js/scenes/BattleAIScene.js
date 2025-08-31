@@ -353,7 +353,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
         // Create RexUI InputText with current name value
         const currentName = this.playerCharacter && this.playerCharacter.name ? this.playerCharacter.name : '';
-        let inputText = this.add.rexInputText(centerX-50, centerY + 20, 300, 40, {
+        let inputText = this.add.rexInputText(centerX, centerY-20, 300, 40, {
             type: 'text',
             placeholder: 'Enter your character name...',
             text: currentName, // Pre-fill with current name
@@ -366,8 +366,8 @@ export default class BattleAIScene extends Phaser.Scene {
             // borderRadius: 8,
             // padding: { x: 10, y: 8 },
             maxLength: 20,
-            selectAll: true,
-        });
+            selectAll: true
+        }).setOrigin(0.5, 0.5);
 
 
         // Buttons
@@ -389,8 +389,36 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
         cancelButton.setInteractive();
 
+        // Resize handler to keep elements centered
+        const updatePositions = () => {
+            const newCenterX = this.game.scale.displaySize.width / 2;
+            const newCenterY = this.game.scale.displaySize.height / 2;
+            
+            // Update overlay
+            overlay.clear();
+            overlay.fillStyle(0x000000, 0.8);
+            overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+            
+            // Update modal
+            modal.clear();
+            modal.fillStyle(0x2c3e50, 0.95);
+            modal.fillRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
+            modal.lineStyle(2, 0xffffff, 0.3);
+            modal.strokeRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
+            
+            // Update text positions
+            titleText.setPosition(newCenterX, newCenterY - 70);
+            inputText.setPosition(newCenterX, newCenterY + 20);
+            saveButton.setPosition(newCenterX - 60, newCenterY + 40);
+            cancelButton.setPosition(newCenterX + 60, newCenterY + 40);
+        };
+
+        // Listen for resize events
+        this.scale.on('resize', updatePositions);
+
         // Event handlers
         const cleanup = () => {
+            this.scale.off('resize', updatePositions);
             overlay.destroy();
             modal.destroy();
             titleText.destroy();
@@ -443,8 +471,8 @@ export default class BattleAIScene extends Phaser.Scene {
         overlay.fillStyle(0x000000, 0.8);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
-        const centerX = this.cameras.main.centerX;
-        const centerY = this.cameras.main.centerY;
+        const centerX = this.game.scale.displaySize.width / 2;
+        const centerY = this.game.scale.displaySize.height / 2;
 
         // Create modal background
         const modal = this.add.graphics();
@@ -471,7 +499,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
         // Create RexUI InputText for multi-line description with current description value
         const currentDescription = this.playerCharacter && this.playerCharacter.description ? this.playerCharacter.description : '';
-        const inputText = this.add.rexInputText(centerX - 50, centerY+30, 400, 100, {
+        const inputText = this.add.rexInputText(centerX, centerY, 400, 100, {
             type: 'textarea',
             placeholder: 'Enter your character description...\n\nExample: A powerful warrior with lightning magic, wielding a legendary sword and wearing enchanted armor.',
             text: currentDescription, // Pre-fill with current description
@@ -489,7 +517,7 @@ export default class BattleAIScene extends Phaser.Scene {
                 mode: 'word',
                 width: 380
             }
-        });
+        }).setOrigin(0.5, 0.5);
 
         // Buttons
         const saveButton = this.add.text(centerX - 80, centerY + 80, 'Save', {
@@ -510,8 +538,37 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
         cancelButton.setInteractive();
 
+        // Resize handler to keep elements centered
+        const updatePositions = () => {
+            const newCenterX = this.game.scale.displaySize.width / 2;
+            const newCenterY = this.game.scale.displaySize.height / 2;
+            
+            // Update overlay
+            overlay.clear();
+            overlay.fillStyle(0x000000, 0.8);
+            overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+            
+            // Update modal
+            modal.clear();
+            modal.fillStyle(0x2c3e50, 0.95);
+            modal.fillRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
+            modal.lineStyle(2, 0xffffff, 0.3);
+            modal.strokeRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
+            
+            // Update text positions
+            titleText.setPosition(newCenterX, newCenterY - 120);
+            instructionsText.setPosition(newCenterX, newCenterY - 80);
+            inputText.setPosition(newCenterX, newCenterY + 30);
+            saveButton.setPosition(newCenterX - 80, newCenterY + 80);
+            cancelButton.setPosition(newCenterX + 80, newCenterY + 80);
+        };
+
+        // Listen for resize events
+        this.scale.on('resize', updatePositions);
+
         // Event handlers
         const cleanup = () => {
+            this.scale.off('resize', updatePositions);
             overlay.destroy();
             modal.destroy();
             titleText.destroy();

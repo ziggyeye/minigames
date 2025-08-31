@@ -26,7 +26,7 @@ const config = {
         createContainer: true
     },
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.HEIGHT_CONTROLS_WIDTH,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 720,
         height: 1280,
@@ -46,22 +46,22 @@ const config = {
             debug: false
         }
     },
-    plugins: {
-        global: [
-            {
-                key: 'rexInputTextPlugin',
-                plugin: InputTextPlugin,
-                start: true
-            }
-        ],
-        scene: [
-            {
-                key: 'rexUI',
-                plugin: RexUIPlugin,
-                mapping: 'rexUI'
-            }
-        ]
-    },
+            plugins: {
+            global: [
+                {
+                    key: 'rexInputTextPlugin',
+                    plugin: InputTextPlugin,
+                    start: true
+                }
+            ],
+            scene: [
+                {
+                    key: 'rexUI',
+                    plugin: RexUIPlugin,
+                    mapping: 'rexUI'
+                }
+            ]
+        },
     scene: [MenuScene, CircusScene, BattleAIScene],
     backgroundColor: '#34495e',
     pixelArt: false,

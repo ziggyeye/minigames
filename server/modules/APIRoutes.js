@@ -581,20 +581,26 @@ Please write a short paragraph (2-3 sentences) describing an epic battle between
 2. How their abilities interact
 3. Who wins and why (make it dramatic and fun)
 4. Keep it family-friendly and entertaining
-5. Put winner [WIN:{NAME}] and loser [LOSE:{NAME}] in the text
+5. Resonpose should be in json format. Add "result" field and a "winner" and "loser" field.
+6. No ties
 
-Format your response as a single paragraph.`;
+Format your result as a single paragraph.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const battleText = response.text();
 
+    let fixedJsonString = battleText
+      .replace(/^```json\n/, '') // Remove ```json at the start
+      .replace(/\n```$/, '') // Remove ``` at the end
+      .trim();
+    fixedJsonString = fixedJsonString.replace(/([^\\])`/g, '');
     // Parse the AI response
-    return this.parseAIBattleResult(battleText, playerCharacter, aiCharacter);
+    return this.parseAIBattleResult(fixedJsonString, playerCharacter, aiCharacter);
   }
 
   /**
-   * Parse AI battle result and determine winner/loser
+   * Parse AI battle result and determine winner/loser 
    * @param {string} battleText - AI generated battle text
    * @param {Object} playerCharacter - Player's character
    * @param {Object} aiCharacter - AI character
@@ -602,54 +608,15 @@ Format your response as a single paragraph.`;
    */
   parseAIBattleResult(battleText, playerCharacter, aiCharacter) {
     console.log('Parsing AI battle result:', battleText);
+    var json = JSON.parse(battleText);
+    const winMatch = json.winner;
+    const loseMatch = json.loser;
     
-    // Parse winner and loser from the text using [WIN:{NAME}] and [LOSE:{NAME}] format
-    const winMatch = battleText.match(/\[WIN:([^\]]+)\]/);
-    const loseMatch = battleText.match(/\[LOSE:([^\]]+)\]/);
-    
-    let winner, loser, result;
-    
-    if (winMatch && loseMatch) {
-      // Both winner and loser are specified in the text
-      const winnerName = winMatch[1].trim();
-      
-      // Determine which character matches the winner name
-      if (winnerName.toLowerCase() === playerCharacter.name.toLowerCase()) {
-        winner = playerCharacter;
-        loser = aiCharacter;
-        result = 'win';
-      } else if (winnerName.toLowerCase() === aiCharacter.name.toLowerCase()) {
-        winner = aiCharacter;
-        loser = playerCharacter;
-        result = 'loss';
-      } else {
-        // Fallback: winner name doesn't match either character
-        console.warn('Winner name from AI does not match any character, using random result');
-        const playerWins = Math.random() > 0.5;
-        winner = playerWins ? playerCharacter : aiCharacter;
-        loser = playerWins ? aiCharacter : playerCharacter;
-        result = playerWins ? 'win' : 'loss';
-      }
-    } else {
-      // Fallback: no clear winner/loser markers, use keyword detection
-      console.warn('No clear winner/loser markers found, using keyword detection');
-      const playerWins = battleText.toLowerCase().includes(playerCharacter.name.toLowerCase()) && 
-                        (battleText.toLowerCase().includes('win') || 
-                         battleText.toLowerCase().includes('victory') || 
-                         battleText.toLowerCase().includes('defeat') ||
-                         battleText.toLowerCase().includes('triumph'));
-      
-      winner = playerWins ? playerCharacter : aiCharacter;
-      loser = playerWins ? aiCharacter : playerCharacter;
-      result = playerWins ? 'win' : 'loss';
-    }
-
     return {
       scenario: "AI-Generated Battle",
-      winner: winner,
-      loser: loser,
-      description: battleText.trim(),
-      result: result
+      winner: winMatch,
+      loser: loseMatch,
+      description: json.result.trim(),
     };
   }
 
