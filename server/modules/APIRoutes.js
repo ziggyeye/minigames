@@ -503,12 +503,16 @@ export class APIRoutes {
       // Update battle statistics
       const battleStats = await this.redisManager.updateBattleStats(discordUserId, battleResult, playerCharacter);
 
+      // Get updated character level
+      const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
+
       const response = {
         success: true,
         playerCharacter: playerCharacter,
         aiCharacter: aiCharacter,
         battleResult: battleResult,
         battleStats: battleStats,
+        characterLevel: characterLevel,
         timestamp: new Date().toISOString()
       };
       
@@ -531,45 +535,471 @@ export class APIRoutes {
    */
   selectRandomAICharacter() {
     const aiCharacters = [
+      // Original 8 characters
       {
         name: "Shadow Blade",
         description: "A mysterious ninja warrior with the ability to teleport through shadows. Master of stealth and assassination techniques. Wields dual katanas and can create shadow clones.",
-        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 } // High dexterity for stealth and speed
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 }
       },
       {
         name: "Thunder Fist",
         description: "A powerful martial artist who can channel electricity through his fists. His punches create thunderous shockwaves and can paralyze opponents. Master of lightning-fast strikes.",
-        stats: { STR: 3, DEX: 3, CON: 2, INT: 2 } // Balanced strength and speed
+        stats: { STR: 3, DEX: 3, CON: 2, INT: 2 }
       },
       {
         name: "Crystal Guardian",
         description: "A mystical warrior made of living crystal. Can create impenetrable barriers and shoot crystal shards. Immune to most physical attacks and can regenerate from any damage.",
-        stats: { STR: 2, DEX: 1, CON: 4, INT: 3 } // High constitution for defense, high intelligence for barriers
+        stats: { STR: 2, DEX: 1, CON: 4, INT: 3 }
       },
       {
         name: "Flame Phoenix",
         description: "A fire elemental with the ability to transform into a phoenix. Can control fire and heat, fly at incredible speeds, and resurrect from ashes. Master of fire magic.",
-        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 } // Balanced with high dexterity for flight, high intelligence for magic
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
       },
       {
         name: "Iron Titan",
         description: "A massive robot warrior with impenetrable armor. Can transform parts of its body into weapons and has superhuman strength. Immune to most conventional attacks.",
-        stats: { STR: 4, DEX: 1, CON: 3, INT: 2 } // Maximum strength, low dexterity (slow but powerful)
+        stats: { STR: 4, DEX: 1, CON: 3, INT: 2 }
       },
       {
         name: "Frost Witch",
         description: "An ice sorceress who can freeze enemies solid and create blizzards. Can walk on water by freezing it and summon ice elementals. Master of cold magic.",
-        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 } // Maximum intelligence for magic, high constitution for ice armor
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 }
       },
       {
         name: "Storm Rider",
         description: "A wind elemental who can fly at supersonic speeds and create tornadoes. Can become intangible like mist and strike with hurricane-force winds.",
-        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 } // Maximum dexterity for speed and intangibility
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 }
       },
       {
         name: "Earth Shaker",
         description: "A giant stone warrior who can cause earthquakes and create rock barriers. Can merge with the ground and emerge anywhere. Master of earth magic.",
-        stats: { STR: 3, DEX: 1, CON: 4, INT: 2 } // High strength and constitution, low dexterity (slow but tanky)
+        stats: { STR: 3, DEX: 1, CON: 4, INT: 2 }
+      },
+      
+      // Lawful Good Heroes
+      {
+        name: "Paladin of Light",
+        description: "A holy warrior clad in radiant armor, wielding a blessed sword that glows with divine power. Can heal allies and smite evil with holy magic.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Guardian Angel",
+        description: "A celestial being with pure white wings and a halo of light. Protects the innocent with divine shields and can banish evil with holy fire.",
+        stats: { STR: 2, DEX: 3, CON: 3, INT: 2 }
+      },
+      {
+        name: "Justice Seeker",
+        description: "A noble knight who upholds the law with unwavering dedication. Wields a sword of truth that can cut through lies and deception.",
+        stats: { STR: 3, DEX: 2, CON: 2, INT: 3 }
+      },
+      
+      // Neutral Good Heroes
+      {
+        name: "Nature's Champion",
+        description: "A druid who communes with the spirits of the forest. Can transform into animals, control plants, and harness the raw power of nature.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Wandering Healer",
+        description: "A compassionate cleric who travels the land helping those in need. Masters of healing magic and protective spells.",
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 }
+      },
+      {
+        name: "Beast Master",
+        description: "A ranger who has formed deep bonds with wild animals. Fights alongside loyal companions and can communicate with all creatures.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      
+      // Chaotic Good Heroes
+      {
+        name: "Freedom Fighter",
+        description: "A rebel who fights against tyranny and oppression. Uses guerrilla tactics and can rally others to the cause of justice.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Wild Mage",
+        description: "A chaotic spellcaster whose magic is unpredictable but powerful. Can cast spells with random effects that often turn the tide of battle.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Rogue Hero",
+        description: "A charming thief with a heart of gold who steals from the rich to give to the poor. Master of stealth and deception.",
+        stats: { STR: 2, DEX: 4, CON: 1, INT: 3 }
+      },
+      
+      // Lawful Neutral Characters
+      {
+        name: "Iron Sentinel",
+        description: "A mechanical guardian programmed to protect ancient ruins. Follows its protocols with unwavering precision and efficiency.",
+        stats: { STR: 3, DEX: 1, CON: 4, INT: 2 }
+      },
+      {
+        name: "Order Keeper",
+        description: "A monk who maintains perfect balance and discipline. Masters of martial arts and can achieve superhuman feats through meditation.",
+        stats: { STR: 2, DEX: 3, CON: 3, INT: 2 }
+      },
+      {
+        name: "Time Watcher",
+        description: "A mysterious entity that maintains the flow of time. Can slow down or speed up time around them and see into the past and future.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      
+      // True Neutral Characters
+      {
+        name: "Elemental Spirit",
+        description: "A primordial being of pure elemental energy. Can shift between fire, water, earth, and air forms at will.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Wild Shaman",
+        description: "A tribal mystic who communes with spirits and nature. Can channel the raw power of the elements and speak with animals.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Balance Keeper",
+        description: "A mysterious figure who maintains equilibrium in the world. Can absorb and redirect any form of energy or magic.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      
+      // Chaotic Neutral Characters
+      {
+        name: "Mad Alchemist",
+        description: "A brilliant but unstable scientist who creates explosive potions and dangerous experiments. Never knows what his concoctions will do.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Chaos Weaver",
+        description: "A sorcerer who draws power from pure chaos. Can create random magical effects and bend reality in unpredictable ways.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Wild Berserker",
+        description: "A fierce warrior who enters a battle rage that makes them unstoppable but uncontrollable. Strength increases dramatically in combat.",
+        stats: { STR: 4, DEX: 2, CON: 3, INT: 1 }
+      },
+      
+      // Lawful Evil Villains
+      {
+        name: "Dark Paladin",
+        description: "A fallen holy warrior who serves an evil deity. Wields a corrupted sword that drains life and can command undead minions.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Tyrant King",
+        description: "A ruthless ruler who maintains order through fear and oppression. Commands loyal soldiers and uses dark magic to control minds.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Inquisitor",
+        description: "A fanatical enforcer who hunts down heretics and non-believers. Uses torture and fear as weapons and has no mercy.",
+        stats: { STR: 3, DEX: 2, CON: 2, INT: 3 }
+      },
+      
+      // Neutral Evil Villains
+      {
+        name: "Soul Harvester",
+        description: "A necromancer who steals souls to power dark magic. Can raise the dead as mindless servants and drain life from the living.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Shadow Assassin",
+        description: "A deadly killer who works for the highest bidder. Master of poisons, stealth, and can kill with a single strike.",
+        stats: { STR: 2, DEX: 4, CON: 1, INT: 3 }
+      },
+      {
+        name: "Corrupted Druid",
+        description: "A nature priest who has been twisted by dark magic. Can control corrupted animals and spread blight and disease.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      
+      // Chaotic Evil Villains
+      {
+        name: "Demon Lord",
+        description: "A powerful demon from the depths of hell. Can summon other demons, breathe fire, and corrupt the souls of mortals.",
+        stats: { STR: 4, DEX: 2, CON: 3, INT: 1 }
+      },
+      {
+        name: "Mad Jester",
+        description: "A psychotic clown who finds joy in chaos and destruction. Uses deadly toys and can drive opponents insane with laughter.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Blood Cultist",
+        description: "A fanatic who worships dark gods through blood sacrifice. Can channel dark energy and summon eldritch horrors.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      
+      // Unique and Exotic Characters
+      {
+        name: "Void Walker",
+        description: "A being from beyond reality who can phase through dimensions. Can create portals and manipulate space itself.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Crystal Dragon",
+        description: "A majestic dragon made entirely of living crystal. Can breathe crystalline fire and create beautiful but deadly constructs.",
+        stats: { STR: 3, DEX: 2, CON: 4, INT: 1 }
+      },
+      {
+        name: "Quantum Mage",
+        description: "A spellcaster who understands the fundamental laws of reality. Can manipulate probability and exist in multiple places at once.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Living Storm",
+        description: "A sentient storm cloud that can control lightning, rain, and wind. Can transform into pure energy and strike with thunder.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Dream Weaver",
+        description: "A being who exists in the realm of dreams and can pull others into nightmare worlds. Can make dreams reality and reality dreams.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Gravity Master",
+        description: "A warrior who can control the force of gravity itself. Can make opponents float helplessly or crush them with intense pressure.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Sound Bender",
+        description: "A musician who can weaponize sound waves. Can create sonic booms, shatter objects with resonance, and control minds with music.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Mirror Knight",
+        description: "A warrior clad in reflective armor who can redirect attacks and create mirror images of themselves. Can trap opponents in mirror dimensions.",
+        stats: { STR: 2, DEX: 3, CON: 3, INT: 2 }
+      },
+      {
+        name: "Life Giver",
+        description: "A being who can create life from nothing and heal any wound. Can animate objects and bring the dead back to life.",
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 }
+      },
+      {
+        name: "Death Reaper",
+        description: "A spectral figure who harvests souls and can see the moment of death for all living things. Can drain life force and command spirits.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      {
+        name: "Mind Controller",
+        description: "A psychic who can read thoughts and control minds. Can make opponents fight each other or turn them into loyal servants.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Time Traveler",
+        description: "A mysterious figure who can move through time at will. Can age opponents rapidly or reverse their own injuries by going back in time.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      {
+        name: "Reality Shaper",
+        description: "A being who can alter the fundamental laws of physics. Can create impossible objects and bend space and time to their will.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Elemental Fusion",
+        description: "A being made of all four elements combined. Can create devastating combinations like steam explosions or lightning storms.",
+        stats: { STR: 2, DEX: 3, CON: 3, INT: 2 }
+      },
+      {
+        name: "Soul Forge",
+        description: "A blacksmith who can craft weapons from pure soul energy. Can create weapons that grow stronger with each battle.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Memory Thief",
+        description: "A being who can steal memories and knowledge from others. Can use stolen skills and erase opponents' combat experience.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Dimension Walker",
+        description: "A traveler who can step between different realities. Can bring objects and creatures from other dimensions into battle.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Cosmic Guardian",
+        description: "A being who protects the balance of the universe. Can call upon the power of stars and manipulate cosmic energy.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Shadow Puppeteer",
+        description: "A master who can control shadows as if they were living beings. Can create shadow armies and trap opponents in darkness.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Life Force Vampire",
+        description: "A being who feeds on the life energy of others. Can drain strength, speed, and vitality from opponents to empower themselves.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Echo Warrior",
+        description: "A fighter who can create perfect copies of themselves. Each echo can fight independently and share the same consciousness.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Fate Weaver",
+        description: "A being who can see and manipulate the threads of destiny. Can change the outcome of battles by altering probability.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Void Knight",
+        description: "A warrior who draws power from the emptiness between worlds. Can create weapons from pure nothingness and phase through attacks.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Soul Binder",
+        description: "A being who can capture and control the souls of the dead. Can summon powerful spirits and use their abilities.",
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 }
+      },
+      {
+        name: "Reality Mirror",
+        description: "A being who can reflect and amplify any attack back at the attacker. Can copy opponents' abilities and turn them against them.",
+        stats: { STR: 2, DEX: 3, CON: 3, INT: 2 }
+      },
+      {
+        name: "Dream Knight",
+        description: "A warrior who fights in the realm of dreams. Can make nightmares real and turn dreams into weapons.",
+        stats: { STR: 3, DEX: 2, CON: 2, INT: 3 }
+      },
+      {
+        name: "Soul Smith",
+        description: "A craftsman who forges weapons from pure soul energy. Can create weapons that grow stronger with each soul they claim.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Void Caller",
+        description: "A being who can summon creatures from the void between worlds. Can call forth eldritch horrors and void beasts.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Reality Anchor",
+        description: "A being who can stabilize and control the fabric of reality. Can prevent teleportation and lock opponents in place.",
+        stats: { STR: 2, DEX: 2, CON: 4, INT: 2 }
+      },
+      {
+        name: "Soul Storm",
+        description: "A being made of pure soul energy that can take any form. Can possess opponents and control their bodies.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Dream Walker",
+        description: "A being who can enter and control the dreams of others. Can trap opponents in endless nightmares.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Void Master",
+        description: "A being who has mastered the emptiness between worlds. Can create portals, teleport, and manipulate space itself.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Reality Bender",
+        description: "A being who can change the fundamental laws of physics. Can make the impossible possible and the possible impossible.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Soul Guardian",
+        description: "A being who protects the souls of the innocent. Can create barriers of pure soul energy and banish evil spirits.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Dream Master",
+        description: "A being who can control the realm of dreams and nightmares. Can make dreams reality and trap opponents in endless loops.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Void Knight",
+        description: "A warrior who draws power from the void between worlds. Can create weapons from pure nothingness and phase through reality.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Reality Shifter",
+        description: "A being who can shift between different versions of reality. Can bring objects and creatures from parallel worlds.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Soul Harvester",
+        description: "A being who collects and uses the energy of souls. Can drain life force and use it to power devastating attacks.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      {
+        name: "Dream Phantom",
+        description: "A being who exists in the realm between dreams and reality. Can make nightmares real and turn dreams into weapons.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      },
+      {
+        name: "Void Phantom",
+        description: "A being made of pure void energy that can take any form. Can phase through reality and exist in multiple places at once.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 }
+      },
+      {
+        name: "Reality Phantom",
+        description: "A being who can phase between different realities. Can bring the impossible into existence and make the real unreal.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Soul Phantom",
+        description: "A being who can manipulate and control soul energy. Can drain life force and use it to create powerful constructs.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Cosmic Storm",
+        description: "A being who channels the raw power of space itself. Can create black holes, manipulate gravity, and summon cosmic energy.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Mind Breaker",
+        description: "A psychic who can shatter minds and drive opponents insane. Can create illusions so real they cause physical harm.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Life Force Master",
+        description: "A being who can manipulate the essence of life itself. Can drain vitality from opponents and transfer it to allies.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Death Walker",
+        description: "A being who exists between life and death. Can see the moment of death for all living things and manipulate it.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      {
+        name: "Reality Architect",
+        description: "A being who can design and build new realities. Can create pocket dimensions and trap opponents in impossible worlds.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Soul Architect",
+        description: "A being who can design and reshape souls. Can create new beings from pure soul energy and modify existing ones.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Dream Architect",
+        description: "A being who can design and build dream worlds. Can create elaborate nightmares and trap opponents in endless loops.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Void Architect",
+        description: "A being who can design and build structures from pure void energy. Can create impossible geometries and void constructs.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Reality Engineer",
+        description: "A being who can engineer and modify the fabric of reality. Can create impossible machines and bend the laws of physics.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Soul Engineer",
+        description: "A being who can engineer and modify souls. Can create soul-powered machines and modify the essence of life.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Dream Engineer",
+        description: "A being who can engineer and modify dreams. Can create dream machines and trap opponents in engineered nightmares.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Void Engineer",
+        description: "A being who can engineer and modify void energy. Can create void machines and manipulate the emptiness between worlds.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
       }
     ];
 
@@ -613,7 +1043,7 @@ export class APIRoutes {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a creative battle narrator. Create a short, fun, and exciting battle description between two characters.
 

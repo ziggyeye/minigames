@@ -400,6 +400,7 @@ export class RedisManager {
    * Update battle statistics for a user
    * @param {string} discordUserId - Discord user ID
    * @param battleResult
+   * @param {Object} playerCharacter - Player character object
    * @returns {Promise<Object>} Updated battle statistics
    */
   async updateBattleStats(discordUserId, battleResult, playerCharacter) {
@@ -414,14 +415,18 @@ export class RedisManager {
       // Get current stats or initialize
       const currentStats = await this.getBattleStats(discordUserId);
       
-      // Update stats based on battle result
+            // Update stats based on battle result
+      const playerWon = battleResult.winner.name === playerCharacter.name;
       const updatedStats = {
         totalBattles: currentStats.totalBattles + 1,
-        wins: currentStats.wins + (battleResult.winner.name === playerCharacter.name ? 1 : 0),
-        losses: currentStats.losses + (battleResult.loser.name === playerCharacter.name ? 1 : 0),
-   //     ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
+        wins: currentStats.wins + (playerWon ? 1 : 0),
+        losses: currentStats.losses + (playerWon ? 0 : 1),
+    //     ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
         lastBattleDate: new Date().toISOString()
       };
+      
+      // Update character level
+      await this.updateCharacterLevel(discordUserId, playerCharacter.name, playerWon);
       
       // Calculate win rate
       updatedStats.winRate = updatedStats.totalBattles > 0 
@@ -438,6 +443,64 @@ export class RedisManager {
     } catch (error) {
       console.error('❌ Error updating battle stats:', error);
       return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Update character level based on battle result
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
+   * @param {boolean} won - Whether the character won the battle
+   * @returns {Promise<number>} New character level
+   */
+  async updateCharacterLevel(discordUserId, characterName, won) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping character level update');
+        return 0;
+      }
+
+      const levelKey = `minigames:character_levels:${discordUserId}:${characterName}`;
+      
+      if (won) {
+        // Increment level on win
+        const newLevel = await this.client.incr(levelKey);
+        console.log(`📈 Character ${characterName} leveled up to ${newLevel}`);
+        return newLevel;
+      } else {
+        // Reset to 0 on loss
+        await this.client.set(levelKey, 0);
+        console.log(`📉 Character ${characterName} level reset to 0 after loss`);
+        return 0;
+      }
+
+    } catch (error) {
+      console.error('❌ Error updating character level:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get character level
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
+   * @returns {Promise<number>} Character level
+   */
+  async getCharacterLevel(discordUserId, characterName) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, returning default character level');
+        return 0;
+      }
+
+      const levelKey = `minigames:character_levels:${discordUserId}:${characterName}`;
+      const level = await this.client.get(levelKey);
+      
+      return level ? parseInt(level) : 0;
+
+    } catch (error) {
+      console.error('❌ Error getting character level:', error);
+      return 0;
     }
   }
 

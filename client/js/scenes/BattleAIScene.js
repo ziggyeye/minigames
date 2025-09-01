@@ -28,6 +28,9 @@ export default class BattleAIScene extends Phaser.Scene {
             winRate: 0
         };
         
+        // Character level
+        this.characterLevel = 0;
+        
         // User characters cache
         this.userCharacters = [];
     }
@@ -79,6 +82,21 @@ export default class BattleAIScene extends Phaser.Scene {
         }
     }
 
+    async loadCharacterLevel(characterName) {
+        try {
+            const discordUserId = this.getDiscordUserId();
+            console.log('📊 Loading character level for:', characterName);
+
+            // For now, we'll set it to 0 since we don't have a direct API endpoint for character levels
+            // The level will be updated after the first battle
+            this.characterLevel = 0;
+            console.log('📊 Character level set to:', this.characterLevel);
+        } catch (error) {
+            console.error('❌ Error loading character level:', error);
+            this.characterLevel = 0;
+        }
+    }
+
     async loadUserCharacters() {
         try {
             // Get Discord user ID
@@ -113,6 +131,9 @@ export default class BattleAIScene extends Phaser.Scene {
                         this.allocatedPoints = Object.values(this.characterStats).reduce((sum, val) => sum + val, 0);
                         console.log('📊 Loaded character stats:', this.characterStats);
                     }
+                    
+                    // Load character level
+                    await this.loadCharacterLevel(firstCharacter.characterName);
                     
                     console.log('🎭 Auto-filled with character:', firstCharacter.characterName);
                 }
@@ -886,6 +907,11 @@ export default class BattleAIScene extends Phaser.Scene {
                     };
                 }
 
+                // Update character level from server response
+                if (result.characterLevel !== undefined) {
+                    this.characterLevel = result.characterLevel;
+                }
+
                 this.isLoading = false;
                 this.showBattleResult();
             } else {
@@ -1083,8 +1109,16 @@ export default class BattleAIScene extends Phaser.Scene {
         //     color: '#f39c12'
         // });
 
+        // Character level display
+        this.add.text(centerX + 50, statsY + 50, `Level: ${this.characterLevel}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#f39c12',
+            fontStyle: 'bold'
+        });
+
         // Battle again button
-        const buttonY = statsY + 100;
+        const buttonY = statsY + 120;
         const battleAgainButton = this.add.text(centerX, buttonY, '⚔️ Battle Again!', {
             fontSize: '20px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
