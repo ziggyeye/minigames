@@ -442,12 +442,20 @@ export class APIRoutes {
 
       const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), limit);
       
+      // Get battle cooldown status
+      const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+      
       res.json({
         success: true,
         discordUserId: discordUserId.trim(),
         characters: characters,
         count: characters.length,
-        limit: limit
+        limit: limit,
+        cooldownStatus: {
+          onCooldown: cooldownStatus.onCooldown,
+          timeRemaining: cooldownStatus.timeRemaining,
+          cooldownExpiry: cooldownStatus.cooldownExpiry ? cooldownStatus.cooldownExpiry.toISOString() : null
+        }
       });
     } catch (error) {
       console.error('❌ Error getting user characters:', error);
@@ -463,6 +471,18 @@ export class APIRoutes {
   async handleBattleSimulation(req, res) {
     try {
       const { clientCharacter, discordUserId } = req.body;
+      
+      // Check battle cooldown first
+      const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+      
+      if (cooldownStatus.onCooldown) {
+        const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+        return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
+          cooldownExpiry: cooldownStatus.cooldownExpiry,
+          timeRemaining: cooldownStatus.timeRemaining
+        });
+      }
+
       const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), 10);
       const firstCharacter = characters[0];
 
@@ -506,6 +526,9 @@ export class APIRoutes {
       // Get updated character level
       const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
 
+      // Set battle cooldown
+      const cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
+
       const response = {
         success: true,
         playerCharacter: playerCharacter,
@@ -513,6 +536,7 @@ export class APIRoutes {
         battleResult: battleResult,
         battleStats: battleStats,
         characterLevel: characterLevel,
+        cooldownExpiry: cooldownExpiry.toISOString(),
         timestamp: new Date().toISOString()
       };
       

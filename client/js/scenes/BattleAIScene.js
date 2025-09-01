@@ -31,6 +31,10 @@ export default class BattleAIScene extends Phaser.Scene {
         // Character level
         this.characterLevel = 0;
         
+        // Battle cooldown tracking
+        this.cooldownExpiry = null;
+        this.cooldownTimer = null;
+        
         // User characters cache
         this.userCharacters = [];
     }
@@ -97,6 +101,91 @@ export default class BattleAIScene extends Phaser.Scene {
         }
     }
 
+    checkCooldown() {
+        if (!this.cooldownExpiry) {
+            return { onCooldown: false, timeRemaining: 0 };
+        }
+
+        const now = new Date();
+        const timeRemaining = Math.max(0, this.cooldownExpiry.getTime() - now.getTime());
+        const onCooldown = timeRemaining > 0;
+
+        return {
+            onCooldown,
+            timeRemaining,
+            cooldownExpiry: this.cooldownExpiry
+        };
+    }
+
+    formatTimeRemaining(milliseconds) {
+        const seconds = Math.ceil(milliseconds / 1000);
+        return `${seconds}s`;
+    }
+
+    startCooldownTimer() {
+        // Clear existing timer
+        if (this.cooldownTimer) {
+            clearInterval(this.cooldownTimer);
+        }
+        
+        // Update cooldown display every second
+        this.cooldownTimer = setInterval(() => {
+            this.updateCooldownDisplay();
+        }, 1000);
+    }
+
+    stopCooldownTimer() {
+        if (this.cooldownTimer) {
+            clearInterval(this.cooldownTimer);
+            this.cooldownTimer = null;
+        }
+    }
+
+    updateCooldownDisplay() {
+        const cooldownStatus = this.checkCooldown();
+        
+        // Update main battle button
+        if (this.battleButton) {
+            if (cooldownStatus.onCooldown) {
+                const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+                this.battleButton.setText(`⏰ Cooldown: ${timeRemaining}`);
+                this.battleButton.setBackgroundColor('#95a5a6');
+                this.battleButton.disableInteractive();
+            } else {
+                // Cooldown expired
+                this.battleButton.setText('⚔️ Start Battle!');
+                this.battleButton.setBackgroundColor('#e74c3c');
+                this.battleButton.setInteractive();
+                this.battleButton.on('pointerdown', () => {
+                    this.startBattle();
+                });
+            }
+        }
+        
+        // Update battle again button
+        if (this.battleAgainButton) {
+            if (cooldownStatus.onCooldown) {
+                const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+                this.battleAgainButton.setText(`⏰ Cooldown: ${timeRemaining}`);
+                this.battleAgainButton.setBackgroundColor('#95a5a6');
+                this.battleAgainButton.disableInteractive();
+            } else {
+                // Cooldown expired
+                this.battleAgainButton.setText('⚔️ Battle Again!');
+                this.battleAgainButton.setBackgroundColor('#3498db');
+                this.battleAgainButton.setInteractive();
+                this.battleAgainButton.on('pointerdown', () => {
+                    this.startNewBattle();
+                });
+            }
+        }
+        
+        // Stop timer if cooldown expired for both buttons
+        if (!cooldownStatus.onCooldown && this.battleButton && this.battleAgainButton) {
+            this.stopCooldownTimer();
+        }
+    }
+
     async loadUserCharacters() {
         try {
             // Get Discord user ID
@@ -116,6 +205,12 @@ export default class BattleAIScene extends Phaser.Scene {
             if (result.success && result.characters) {
                 this.userCharacters = result.characters;
                 console.log(`✅ Loaded ${this.userCharacters.length} characters`);
+                
+                // Handle cooldown status from server
+                if (result.cooldownStatus) {
+                    this.cooldownExpiry = result.cooldownStatus.cooldownExpiry ? new Date(result.cooldownStatus.cooldownExpiry) : null;
+                    console.log('⏰ Cooldown status:', result.cooldownStatus);
+                }
                 
                 // Auto-fill with first character if available
                 if (this.userCharacters.length > 0) {
@@ -148,6 +243,11 @@ export default class BattleAIScene extends Phaser.Scene {
         
         // Initialize character creation form (with auto-filled data if available)
         this.showCharacterCreation();
+    }
+
+    shutdown() {
+        // Clean up timer when scene is destroyed
+        this.stopCooldownTimer();
     }
 
     createBackground() {
@@ -297,18 +397,43 @@ export default class BattleAIScene extends Phaser.Scene {
         // Create stats allocation UI
         this.createStatsAllocationUI(centerX, top);
 
+        // Check cooldown status
+        const cooldownStatus = this.checkCooldown();
+        
         // Battle button
-        const battleButton = this.add.text(centerX, top + 180, '⚔️ Start Battle!', {
+        let battleButtonText = '⚔️ Start Battle!';
+        let battleButtonColor = '#e74c3c';
+        let battleButtonEnabled = true;
+        
+        if (cooldownStatus.onCooldown) {
+            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+            battleButtonText = `⏰ Cooldown: ${timeRemaining}`;
+            battleButtonColor = '#95a5a6';
+            battleButtonEnabled = false;
+        }
+        
+        const battleButton = this.add.text(centerX, top + 180, battleButtonText, {
             fontSize: '24px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
-            backgroundColor: '#e74c3c',
+            backgroundColor: battleButtonColor,
             padding: { x: 20, y: 10 }
         }).setOrigin(0.5);
-        battleButton.setInteractive();
-        battleButton.on('pointerdown', () => {
-            this.startBattle();
-        });
+        
+        if (battleButtonEnabled) {
+            battleButton.setInteractive();
+            battleButton.on('pointerdown', () => {
+                this.startBattle();
+            });
+        }
+        
+        // Store reference to battle button for cooldown updates
+        this.battleButton = battleButton;
+        
+        // Start cooldown timer if on cooldown
+        if (cooldownStatus.onCooldown) {
+            this.startCooldownTimer();
+        }
 
         // Instructions
         this.add.text(centerX, top + 250, 'Click on the input fields to enter your character details', {
@@ -804,6 +929,14 @@ export default class BattleAIScene extends Phaser.Scene {
             return;
         }
 
+        // Check cooldown
+        const cooldownStatus = this.checkCooldown();
+        if (cooldownStatus.onCooldown) {
+            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+            this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
+            return;
+        }
+
         this.isLoading = true;
         this.showLoadingScreen();
         
@@ -910,6 +1043,12 @@ export default class BattleAIScene extends Phaser.Scene {
                 // Update character level from server response
                 if (result.characterLevel !== undefined) {
                     this.characterLevel = result.characterLevel;
+                }
+
+                // Update cooldown from server response
+                if (result.cooldownExpiry) {
+                    this.cooldownExpiry = new Date(result.cooldownExpiry);
+                    console.log('⏰ Battle cooldown set until:', this.cooldownExpiry);
                 }
 
                 this.isLoading = false;
@@ -1119,17 +1258,39 @@ export default class BattleAIScene extends Phaser.Scene {
 
         // Battle again button
         const buttonY = statsY + 120;
-        const battleAgainButton = this.add.text(centerX, buttonY, '⚔️ Battle Again!', {
+        
+        // Check cooldown status for battle again button
+        const battleAgainCooldownStatus = this.checkCooldown();
+        
+        let battleAgainButtonText = '⚔️ Battle Again!';
+        let battleAgainButtonColor = '#3498db';
+        let battleAgainButtonEnabled = true;
+        
+        if (battleAgainCooldownStatus.onCooldown) {
+            const timeRemaining = this.formatTimeRemaining(battleAgainCooldownStatus.timeRemaining);
+            battleAgainButtonText = `⏰ Cooldown: ${timeRemaining}`;
+            battleAgainButtonColor = '#95a5a6';
+            battleAgainButtonEnabled = false;
+        }
+        
+        const battleAgainButton = this.add.text(centerX, buttonY, battleAgainButtonText, {
             fontSize: '20px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
-            backgroundColor: '#3498db',
+            backgroundColor: battleAgainButtonColor,
             padding: { x: 20, y: 10 }
         }).setOrigin(0.5);
-        battleAgainButton.setInteractive();
-        battleAgainButton.on('pointerdown', () => {
-            this.startNewBattle();
-        });
+        
+        if (battleAgainButtonEnabled) {
+            battleAgainButton.setInteractive();
+            battleAgainButton.on('pointerdown', () => {
+                this.startNewBattle();
+            });
+        }
+        
+        // Store reference to battle again button for cooldown updates
+        this.battleAgainButton = battleAgainButton;
+
 
         // Back to menu button
         const backButton = this.add.text(centerX, buttonY + 50, '← Back', {
@@ -1152,6 +1313,12 @@ export default class BattleAIScene extends Phaser.Scene {
             resultBg.fillRoundedRect(modalX, modalY, modalWidth, totalContentHeight, 15);
             resultBg.lineStyle(2, 0xffffff, 0.2);
             resultBg.strokeRoundedRect(modalX, modalY, modalWidth, totalContentHeight, 15);
+        }
+        
+        // Start cooldown timer if on cooldown
+        const resultCooldownStatus = this.checkCooldown();
+        if (resultCooldownStatus.onCooldown) {
+            this.startCooldownTimer();
         }
     }
 
@@ -1209,6 +1376,14 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     async startNewBattle() {
+        // Check cooldown
+        const cooldownStatus = this.checkCooldown();
+        if (cooldownStatus.onCooldown) {
+            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+            this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
+            return;
+        }
+
         // Keep the same player character but request a new battle from server
         this.isLoading = true;
         this.showLoadingScreen();

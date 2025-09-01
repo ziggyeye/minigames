@@ -505,6 +505,99 @@ export class RedisManager {
   }
 
   /**
+   * Set battle cooldown for a user
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<Date>} Cooldown expiration time
+   */
+  async setBattleCooldown(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping battle cooldown set');
+        return new Date(Date.now() + 60000); // 60 seconds from now
+      }
+
+      const cooldownKey = `minigames:battle_cooldown:${discordUserId}`;
+      const cooldownExpiry = new Date(Date.now() + 60000); // 60 seconds
+      
+      // Set cooldown with 60 second expiration
+      await this.client.setEx(cooldownKey, 60, cooldownExpiry.toISOString());
+      
+      console.log(`⏰ Battle cooldown set for ${discordUserId} until ${cooldownExpiry.toISOString()}`);
+      return cooldownExpiry;
+
+    } catch (error) {
+      console.error('❌ Error setting battle cooldown:', error);
+      return new Date(Date.now() + 60000);
+    }
+  }
+
+  /**
+   * Get battle cooldown for a user
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<Date|null>} Cooldown expiration time or null if no cooldown
+   */
+  async getBattleCooldown(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, returning no cooldown');
+        return null;
+      }
+
+      const cooldownKey = `minigames:battle_cooldown:${discordUserId}`;
+      const cooldownExpiry = await this.client.get(cooldownKey);
+      
+      if (cooldownExpiry) {
+        const expiryDate = new Date(cooldownExpiry);
+        console.log(`⏰ Battle cooldown active for ${discordUserId} until ${expiryDate.toISOString()}`);
+        return expiryDate;
+      }
+      
+      return null;
+
+    } catch (error) {
+      console.error('❌ Error getting battle cooldown:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if user is on battle cooldown
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<{onCooldown: boolean, timeRemaining: number, cooldownExpiry: Date|null}>}
+   */
+  async checkBattleCooldown(discordUserId) {
+    try {
+      const cooldownExpiry = await this.getBattleCooldown(discordUserId);
+      
+      if (!cooldownExpiry) {
+        return {
+          onCooldown: false,
+          timeRemaining: 0,
+          cooldownExpiry: null
+        };
+      }
+
+      const now = new Date();
+      const timeRemaining = Math.max(0, cooldownExpiry.getTime() - now.getTime());
+      const onCooldown = timeRemaining > 0;
+
+      return {
+        onCooldown,
+        timeRemaining,
+        cooldownExpiry
+      };
+
+    } catch (error) {
+      console.error('❌ Error checking battle cooldown:', error);
+      return {
+        onCooldown: false,
+        timeRemaining: 0,
+        cooldownExpiry: null
+      };
+    }
+  }
+
+  /**
    * Get battle statistics for a user
    * @param {string} discordUserId - Discord user ID
    * @returns {Promise<Object>} Battle statistics
