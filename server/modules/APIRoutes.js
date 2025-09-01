@@ -328,11 +328,30 @@ export class APIRoutes {
    */
   async handleSaveCharacter(req, res) {
     try {
-      const { characterName, description, discordUserId } = req.body;
+      const { characterName, description, discordUserId, stats } = req.body;
       
       // Validate required fields
       if (!characterName || !description || !discordUserId) {
         return this.sendErrorResponse(res, 400, 'Missing required fields: characterName, description, and discordUserId are required');
+      }
+
+      // Validate character stats if provided
+      if (stats) {
+        const validStats = ['STR', 'DEX', 'CON', 'INT'];
+        const totalPoints = Object.values(stats).reduce((sum, val) => sum + val, 0);
+        
+        if (totalPoints !== 10) {
+          return this.sendErrorResponse(res, 400, 'Character stats must total exactly 10 points');
+        }
+        
+        for (const [statName, value] of Object.entries(stats)) {
+          if (!validStats.includes(statName)) {
+            return this.sendErrorResponse(res, 400, `Invalid stat name: ${statName}. Valid stats: ${validStats.join(', ')}`);
+          }
+          if (typeof value !== 'number' || value < 1 || value > 10) {
+            return this.sendErrorResponse(res, 400, `Invalid stat value for ${statName}: must be a number between 1 and 10`);
+          }
+        }
       }
 
       // Validate character name length
@@ -361,13 +380,14 @@ export class APIRoutes {
         }
       }
 
-      console.log(`🎭 Saving character: ${characterName} for user ${discordUserId}`);
+      console.log(`🎭 Saving character: ${characterName} for user ${discordUserId}`, stats);
 
       // Save character to Redis
       const character = {
         characterName: characterName.trim(),
         description: description.trim(),
         discordUserId: discordUserId,
+        stats: stats || { STR: 1, DEX: 1, CON: 1, INT: 1 }, // Default stats if not provided
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         id: `char_${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -442,8 +462,15 @@ export class APIRoutes {
    */
   async handleBattleSimulation(req, res) {
     try {
-      const { playerCharacter, discordUserId } = req.body;
-      
+      const { clientCharacter, discordUserId } = req.body;
+      const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), 10);
+      const firstCharacter = characters[0];
+
+      let playerCharacter  = {
+        name: firstCharacter.characterName,
+        description: firstCharacter.description,
+        stats: firstCharacter.stats
+    };
       // Validate required fields
       if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
         return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
@@ -465,7 +492,7 @@ export class APIRoutes {
         }
       }
 
-      console.log(`⚔️ Simulating battle for character: ${playerCharacter.name}`);
+      console.log(`⚔️ Simulating battle for character: `, playerCharacter);
 
       // Generate AI opponent
       const aiCharacter = this.selectRandomAICharacter();
@@ -506,40 +533,53 @@ export class APIRoutes {
     const aiCharacters = [
       {
         name: "Shadow Blade",
-        description: "A mysterious ninja warrior with the ability to teleport through shadows. Master of stealth and assassination techniques. Wields dual katanas and can create shadow clones."
+        description: "A mysterious ninja warrior with the ability to teleport through shadows. Master of stealth and assassination techniques. Wields dual katanas and can create shadow clones.",
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 } // High dexterity for stealth and speed
       },
       {
         name: "Thunder Fist",
-        description: "A powerful martial artist who can channel electricity through his fists. His punches create thunderous shockwaves and can paralyze opponents. Master of lightning-fast strikes."
+        description: "A powerful martial artist who can channel electricity through his fists. His punches create thunderous shockwaves and can paralyze opponents. Master of lightning-fast strikes.",
+        stats: { STR: 3, DEX: 3, CON: 2, INT: 2 } // Balanced strength and speed
       },
       {
         name: "Crystal Guardian",
-        description: "A mystical warrior made of living crystal. Can create impenetrable barriers and shoot crystal shards. Immune to most physical attacks and can regenerate from any damage."
+        description: "A mystical warrior made of living crystal. Can create impenetrable barriers and shoot crystal shards. Immune to most physical attacks and can regenerate from any damage.",
+        stats: { STR: 2, DEX: 1, CON: 4, INT: 3 } // High constitution for defense, high intelligence for barriers
       },
       {
         name: "Flame Phoenix",
-        description: "A fire elemental with the ability to transform into a phoenix. Can control fire and heat, fly at incredible speeds, and resurrect from ashes. Master of fire magic."
+        description: "A fire elemental with the ability to transform into a phoenix. Can control fire and heat, fly at incredible speeds, and resurrect from ashes. Master of fire magic.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 } // Balanced with high dexterity for flight, high intelligence for magic
       },
       {
         name: "Iron Titan",
-        description: "A massive robot warrior with impenetrable armor. Can transform parts of its body into weapons and has superhuman strength. Immune to most conventional attacks."
+        description: "A massive robot warrior with impenetrable armor. Can transform parts of its body into weapons and has superhuman strength. Immune to most conventional attacks.",
+        stats: { STR: 4, DEX: 1, CON: 3, INT: 2 } // Maximum strength, low dexterity (slow but powerful)
       },
       {
         name: "Frost Witch",
-        description: "An ice sorceress who can freeze enemies solid and create blizzards. Can walk on water by freezing it and summon ice elementals. Master of cold magic."
+        description: "An ice sorceress who can freeze enemies solid and create blizzards. Can walk on water by freezing it and summon ice elementals. Master of cold magic.",
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 } // Maximum intelligence for magic, high constitution for ice armor
       },
       {
         name: "Storm Rider",
-        description: "A wind elemental who can fly at supersonic speeds and create tornadoes. Can become intangible like mist and strike with hurricane-force winds."
+        description: "A wind elemental who can fly at supersonic speeds and create tornadoes. Can become intangible like mist and strike with hurricane-force winds.",
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 } // Maximum dexterity for speed and intangibility
       },
       {
         name: "Earth Shaker",
-        description: "A giant stone warrior who can cause earthquakes and create rock barriers. Can merge with the ground and emerge anywhere. Master of earth magic."
+        description: "A giant stone warrior who can cause earthquakes and create rock barriers. Can merge with the ground and emerge anywhere. Master of earth magic.",
+        stats: { STR: 3, DEX: 1, CON: 4, INT: 2 } // High strength and constitution, low dexterity (slow but tanky)
       }
     ];
 
-    return aiCharacters[Math.floor(Math.random() * aiCharacters.length)];
+    const selectedCharacter = aiCharacters[Math.floor(Math.random() * aiCharacters.length)];
+    
+    // Return character with predefined stats
+    return selectedCharacter;
   }
+
+
 
   /**
    * Simulate battle between player and AI character
@@ -579,21 +619,25 @@ export class APIRoutes {
 
 Character 1: ${playerCharacter.name}
 Description: ${playerCharacter.description}
+Stats: STR ${playerCharacter.stats?.STR || 1}, DEX ${playerCharacter.stats?.DEX || 1}, CON ${playerCharacter.stats?.CON || 1}, INT ${playerCharacter.stats?.INT || 1}
 
 Character 2: ${aiCharacter.name}
 Description: ${aiCharacter.description}
+Stats: STR ${aiCharacter.stats?.STR || 1}, DEX ${aiCharacter.stats?.DEX || 1}, CON ${aiCharacter.stats?.CON || 1}, INT ${aiCharacter.stats?.INT || 1}
 
 Please write a short paragraph (2-3 sentences) describing an epic battle between these characters. Include:
 1. An exciting opening scene
-2. How their abilities interact
-3. Who wins and why (make it dramatic and fun)
+2. How their abilities and stats interact (STR=physical power, DEX=speed/agility, CON=endurance/defense, INT=magic/tactics)
+3. Who wins and why (consider their stats when determining the winner - make it dramatic and fun)
 4. Keep it family-friendly and entertaining
-5. Resonpose should be in json format. Add "result" field and a "winner" and "loser" field.
+5. Response should be in json format. Add "battleDescription" field for the story and a result block with the fields, "winner" and "loser".
 6. No ties
 7. Do NOT change the character names or descriptions. Keep the casing the same.
+8. Do not include the stat values in the battleDescription.
 
 Format your result as a single paragraph.`;
 
+    console.log('Generating AI battle result:', prompt);
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const battleText = response.text();
@@ -617,8 +661,8 @@ Format your result as a single paragraph.`;
   parseAIBattleResult(battleText, playerCharacter, aiCharacter) {
     console.log('Parsing AI battle result:', battleText);
     var json = JSON.parse(battleText);
-    const winMatch = json.winner;
-    const loseMatch = json.loser;
+    const winMatch = json.result.winner;
+    const loseMatch = json.result.loser;
     
     // check name formatting
     let winner = winMatch;
@@ -642,7 +686,7 @@ Format your result as a single paragraph.`;
       scenario: "AI-Generated Battle",
       winner: winner,
       loser: loser,
-      description: json.result.trim(),
+      description: json.battleDescription.trim(),
     };
   }
 

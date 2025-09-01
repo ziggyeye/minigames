@@ -9,6 +9,16 @@ export default class BattleAIScene extends Phaser.Scene {
         this.battleResult = null;
         this.isLoading = false;
         
+        // Character stats (10 points to allocate)
+        this.characterStats = {
+            STR: 1, // Strength
+            DEX: 1, // Dexterity  
+            CON: 1, // Constitution
+            INT: 1  // Intelligence
+        };
+        this.totalPointsToAllocate = 10;
+        this.allocatedPoints = 4; // Start with 1 in each stat
+        
         // Battle statistics (will be loaded from server)
         this.battleStats = {
             totalBattles: 0,
@@ -96,6 +106,14 @@ export default class BattleAIScene extends Phaser.Scene {
                         name: firstCharacter.characterName,
                         description: firstCharacter.description
                     };
+                    
+                    // Load character stats if available
+                    if (firstCharacter.stats) {
+                        this.characterStats = { ...firstCharacter.stats };
+                        this.allocatedPoints = Object.values(this.characterStats).reduce((sum, val) => sum + val, 0);
+                        console.log('📊 Loaded character stats:', this.characterStats);
+                    }
+                    
                     console.log('🎭 Auto-filled with character:', firstCharacter.characterName);
                 }
             } else {
@@ -141,7 +159,7 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Back button
-        const backButton = this.add.text(16, 16, '← Back to Menu', {
+        const backButton = this.add.text(16, 16, '← Back', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -161,22 +179,24 @@ export default class BattleAIScene extends Phaser.Scene {
         // Create form background
         const formBg = this.add.graphics();
         formBg.fillStyle(0xffffff, 0.1);
-        formBg.fillRoundedRect(centerX - 300, centerY - 200, 600, 400, 15);
+        formBg.fillRoundedRect(centerX - 300, centerY - 300, 600, 600, 15);
         formBg.lineStyle(2, 0xffffff, 0.3);
-        formBg.strokeRoundedRect(centerX - 300, centerY - 200, 600, 400, 15);
+        formBg.strokeRoundedRect(centerX - 300, centerY - 300, 600, 600, 15);
 
         // Title
-        this.add.text(centerX, centerY - 150, 'Create Your Character', {
+        this.add.text(centerX, centerY - 250, 'Create Your Character', {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
+        let top = centerY - 250 + 40;
+
         // Server handles AI integration - no API key needed on client
 
         // Name input label
-        this.add.text(centerX - 250, centerY - 80, 'Character Name:', {
+        this.add.text(centerX - 250, top, 'Character Name:', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff'
@@ -190,7 +210,10 @@ export default class BattleAIScene extends Phaser.Scene {
             ? '#ffffff' 
             : '#cccccc';
             
-        this.nameText = this.add.text(centerX - 250, centerY - 50, nameDisplayText, {
+        top += 18;
+        top += 5;
+
+        this.nameText = this.add.text(centerX - 250, top, nameDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: nameColor,
@@ -202,8 +225,11 @@ export default class BattleAIScene extends Phaser.Scene {
             this.showNameInput();
         });
 
+        top += 16;
+        top += 30;
+
         // Description input label
-        this.add.text(centerX - 250, centerY, 'Character Description:', {
+        this.add.text(centerX - 250, top, 'Character Description:', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff'
@@ -216,8 +242,11 @@ export default class BattleAIScene extends Phaser.Scene {
         const descColor = this.playerCharacter && this.playerCharacter.description 
             ? '#ffffff' 
             : '#cccccc';
+
+        top += 18;
+        top += 5;
             
-        this.descText = this.add.text(centerX - 250, centerY + 30, descDisplayText, {
+        this.descText = this.add.text(centerX - 250, top, descDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: descColor,
@@ -230,8 +259,25 @@ export default class BattleAIScene extends Phaser.Scene {
             this.showDescriptionInput();
         });
 
+        top += 45;
+        top += 5;
+
+        // Character Stats section
+        this.add.text(centerX - 250, top, 'Character Stats (10 points to allocate):', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+
+        top += 25;
+        top += 15;
+
+        // Create stats allocation UI
+        this.createStatsAllocationUI(centerX, top);
+
         // Battle button
-        const battleButton = this.add.text(centerX, centerY + 120, '⚔️ Start Battle!', {
+        const battleButton = this.add.text(centerX, top + 180, '⚔️ Start Battle!', {
             fontSize: '24px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -244,7 +290,7 @@ export default class BattleAIScene extends Phaser.Scene {
         });
 
         // Instructions
-        this.add.text(centerX, centerY + 180, 'Click on the input fields to enter your character details', {
+        this.add.text(centerX, top + 250, 'Click on the input fields to enter your character details', {
             fontSize: '14px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -253,14 +299,14 @@ export default class BattleAIScene extends Phaser.Scene {
 
         // Character loading status
         if (this.userCharacters.length > 0) {
-            this.add.text(centerX, centerY + 200, `✅ Auto-filled with your last character (${this.userCharacters.length} saved)`, {
+            this.add.text(centerX, top + 275, `✅ Auto-filled with your last character (${this.userCharacters.length} saved)`, {
                 fontSize: '12px',
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                 color: '#2ecc71',
                 alpha: 0.8
             }).setOrigin(0.5);
         } else {
-            this.add.text(centerX, centerY + 200, '📝 No saved characters found - create your first character!', {
+            this.add.text(centerX, centerY + 300, '📝 No saved characters found - create your first character!', {
                 fontSize: '12px',
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                 color: '#f39c12',
@@ -269,7 +315,127 @@ export default class BattleAIScene extends Phaser.Scene {
         }
     }
 
+    createStatsAllocationUI(centerX, startY) {
+        const statNames = ['STR', 'DEX', 'CON', 'INT'];
+        const statLabels = {
+            'STR': 'Strength',
+            'DEX': 'Dexterity', 
+            'CON': 'Constitution',
+            'INT': 'Intelligence'
+        };
+        
+        // Store references to stat display texts for updates
+        this.statDisplayTexts = {};
+        this.statButtons = {};
 
+        // Points remaining display
+        this.pointsRemainingText = this.add.text(centerX + 200, startY - 20, `Points: ${this.totalPointsToAllocate - this.allocatedPoints}`, {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#f39c12',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        statNames.forEach((stat, index) => {
+            const yPos = startY + (index * 35);
+            
+            // Stat label
+            this.add.text(centerX - 250, yPos, `${stat} (${statLabels[stat]}):`, {
+                fontSize: '14px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff'
+            });
+            
+            // Decrease button
+            const decreaseBtn = this.add.text(centerX - 50, yPos, '−', {
+                fontSize: '20px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff',
+                backgroundColor: '#e74c3c',
+                padding: { x: 8, y: 2 }
+            }).setOrigin(0.5);
+            decreaseBtn.setInteractive();
+            decreaseBtn.on('pointerdown', () => this.decreaseStat(stat));
+            
+            // Stat value display
+            this.statDisplayTexts[stat] = this.add.text(centerX, yPos, this.characterStats[stat].toString(), {
+                fontSize: '16px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff',
+                backgroundColor: '#34495e',
+                padding: { x: 12, y: 4 }
+            }).setOrigin(0.5);
+            
+            // Increase button
+            const increaseBtn = this.add.text(centerX + 50, yPos, '+', {
+                fontSize: '20px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff',
+                backgroundColor: '#27ae60',
+                padding: { x: 8, y: 2 }
+            }).setOrigin(0.5);
+            increaseBtn.setInteractive();
+            increaseBtn.on('pointerdown', () => this.increaseStat(stat));
+            
+            // Store button references
+            this.statButtons[stat] = { decrease: decreaseBtn, increase: increaseBtn };
+        });
+        
+        // Reset stats button
+        // const resetBtn = this.add.text(centerX + 100, startY + 140, 'Reset', {
+        //     fontSize: '14px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: '#95a5a6',
+        //     padding: { x: 10, y: 5 }
+        // }).setOrigin(0.5);
+        // resetBtn.setInteractive();
+        // resetBtn.on('pointerdown', () => this.resetStats());
+    }
+
+    increaseStat(statName) {
+        if (this.allocatedPoints < this.totalPointsToAllocate && this.characterStats[statName] < 10) {
+            this.characterStats[statName]++;
+            this.allocatedPoints++;
+            this.updateStatsDisplay();
+        }
+    }
+
+    decreaseStat(statName) {
+        if (this.characterStats[statName] > 1) {
+            this.characterStats[statName]--;
+            this.allocatedPoints--;
+            this.updateStatsDisplay();
+        }
+    }
+
+    resetStats() {
+        this.characterStats = { STR: 1, DEX: 1, CON: 1, INT: 1 };
+        this.allocatedPoints = 4;
+        this.updateStatsDisplay();
+    }
+
+    updateStatsDisplay() {
+        // Update stat value displays
+        Object.keys(this.characterStats).forEach(stat => {
+            if (this.statDisplayTexts[stat]) {
+                this.statDisplayTexts[stat].setText(this.characterStats[stat].toString());
+            }
+        });
+        
+        // Update points remaining
+        if (this.pointsRemainingText) {
+            const pointsLeft = this.totalPointsToAllocate - this.allocatedPoints;
+            this.pointsRemainingText.setText(`Points: ${pointsLeft}`);
+            
+            // Change color based on points remaining
+            if (pointsLeft === 0) {
+                this.pointsRemainingText.setColor('#2ecc71'); // Green when all points used
+            } else if (pointsLeft > 0) {
+                this.pointsRemainingText.setColor('#f39c12'); // Orange when points remaining
+            }
+        }
+    }
 
     showSuccess(message) {
         // Create success modal
@@ -635,7 +801,8 @@ export default class BattleAIScene extends Phaser.Scene {
             const characterData = {
                 characterName: this.playerCharacter.name,
                 description: this.playerCharacter.description,
-                discordUserId: discordUserId
+                discordUserId: discordUserId,
+                stats: this.characterStats
             };
 
             console.log('🎭 Saving character to server:', characterData);
@@ -931,7 +1098,7 @@ export default class BattleAIScene extends Phaser.Scene {
         });
 
         // Back to menu button
-        const backButton = this.add.text(centerX, buttonY + 50, '← Back to Menu', {
+        const backButton = this.add.text(centerX, buttonY + 50, '← Back', {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
