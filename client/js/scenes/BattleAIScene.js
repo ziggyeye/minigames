@@ -189,14 +189,17 @@ export default class BattleAIScene extends Phaser.Scene {
                 this.battleButton.setText(`⏰ Cooldown: ${timeRemaining}`);
                 this.battleButton.setBackgroundColor('#95a5a6');
                 this.battleButton.disableInteractive();
+                this.battleWithGemButton.setInteractive();
             } else {
                 // Cooldown expired
-                this.battleButton.setText('⚔️ Start Battle!');
+                this.battleButton.setText('⚔️ Free Battle!');
                 this.battleButton.setBackgroundColor('#e74c3c');
                 this.battleButton.setInteractive();
                 this.battleButton.on('pointerdown', () => {
                     this.startBattle();
                 });
+
+                this.battleWithGemButton.disableInteractive();
             }
         }
         
@@ -445,15 +448,31 @@ export default class BattleAIScene extends Phaser.Scene {
         const cooldownStatus = this.checkCooldown();
         
         // Battle button
-        let battleButtonText = '⚔️ Start Battle!';
+        let battleButtonText = '⚔️ Free Battle!';
         let battleButtonColor = '#e74c3c';
         let battleButtonEnabled = true;
+
+        // Battle with Gem button (next to main battle button)
+        this.battleWithGemButton = this.add.text(centerX, top + 220, '💎 Battle with Gem', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: this.battleGems >= 1 ? '#f39c12' : '#95a5a6',
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5);
         
         if (cooldownStatus.onCooldown) {
             const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
             battleButtonText = `⏰ Cooldown: ${timeRemaining}`;
             battleButtonColor = '#95a5a6';
             battleButtonEnabled = false;
+        
+            this.battleWithGemButton.setInteractive();
+            this.battleWithGemButton.setBackgroundColor('#f39c12');
+        }
+        else {
+            this.battleWithGemButton.setBackgroundColor('#95a5a6');
+            this.battleWithGemButton.disableInteractive();
         }
         
         const battleButton = this.add.text(centerX, top + 180, battleButtonText, {
@@ -474,24 +493,12 @@ export default class BattleAIScene extends Phaser.Scene {
         // Store reference to battle button for cooldown updates
         this.battleButton = battleButton;
         
-        // Battle with Gem button (next to main battle button)
-        const battleWithGemButton = this.add.text(centerX + 200, top + 180, '💎 Battle with Gem', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: this.battleGems >= 1 ? '#f39c12' : '#95a5a6',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
         
         if (this.battleGems >= 1) {
-            battleWithGemButton.setInteractive();
-            battleWithGemButton.on('pointerdown', () => {
+            this.battleWithGemButton .on('pointerdown', () => {
                 this.startBattleWithGem();
             });
         }
-        
-        // Store reference to battle with gem button
-        this.battleWithGemButton = battleWithGemButton;
         
         // Start cooldown timer if on cooldown
         if (cooldownStatus.onCooldown) {
@@ -507,7 +514,7 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Battle gems display and add button
-        const gemsY = top + 320;
+        const gemsY = top + 300;
         
         // Battle gems label
         this.add.text(centerX - 250, gemsY, '💎 Battle Gems:', {
@@ -518,7 +525,7 @@ export default class BattleAIScene extends Phaser.Scene {
         });
 
         // Battle gems count
-        this.add.text(centerX - 150, gemsY, `${this.battleGems}/5`, {
+        this.add.text(centerX - 110, gemsY-8, `${this.battleGems}/5`, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -1405,7 +1412,7 @@ export default class BattleAIScene extends Phaser.Scene {
         this.battleAgainButton = battleAgainButton;
 
         // Battle with Gem button (next to battle again button)
-        const battleAgainWithGemButton = this.add.text(centerX + 200, buttonY, '💎 Battle with Gem', {
+        const battleAgainWithGemButton = this.add.text(centerX, buttonY+45, '💎 Battle with Gem', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -1424,7 +1431,7 @@ export default class BattleAIScene extends Phaser.Scene {
         this.battleAgainWithGemButton = battleAgainWithGemButton;
 
         // Back to menu button
-        const backButton = this.add.text(centerX, buttonY + 50, '← Back', {
+        const backButton = this.add.text(centerX, buttonY + 100, '← Back', {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',

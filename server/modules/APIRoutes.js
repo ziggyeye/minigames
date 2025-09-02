@@ -555,8 +555,16 @@ export class APIRoutes {
       // Get updated character level
       const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
 
+      let cooldownExpiry = null;
       // Set battle cooldown
-      const cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
+      if (!useBattleGem)
+      {
+        cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
+      }
+      else {
+        const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+        cooldownExpiry = cooldownStatus.cooldownExpiry;
+      }
 
       // Get updated battle gems count
       const battleGems = await this.redisManager.getBattleGems(discordUserId);
