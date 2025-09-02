@@ -10,22 +10,20 @@ export default class MenuScene extends Phaser.Scene {
 
     create() {
 
-        this.initDiscord();
-
         // Create background
         this.createBackground();
         
         // Create title
         this.createTitle();
-        
-        // Create game cards
-        this.createGameCards();
+    
         
         // Create high scores section
         //this.createHighScores();
         
         // Add interactive elements
         this.addInteractivity();
+
+        this.initDiscord();
     }
 
     async initDiscord() {
@@ -51,6 +49,10 @@ export default class MenuScene extends Phaser.Scene {
             // Fallback to default user
             this.displayUserName('Player');
         }
+
+        // enble
+         // Create game cards
+         this.createGameCards();
     }
 
     setupDiscordUserUpdates() {
