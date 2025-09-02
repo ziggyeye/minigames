@@ -576,7 +576,7 @@ export class APIRoutes {
         battleResult: battleResult,
         battleStats: battleStats,
         characterLevel: characterLevel,
-        cooldownExpiry: cooldownExpiry.toISOString(),
+        cooldownExpiry: cooldownExpiry ? cooldownExpiry.toISOString() : null,
         battleGems: battleGems,
         timestamp: new Date().toISOString()
       };
