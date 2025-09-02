@@ -1461,8 +1461,9 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showError(message) {
-        // Create error modal
+        // Create error modal with high depth to ensure it's on top
         const overlay = this.add.graphics();
+        overlay.setDepth(1000); // High depth to be above all other UI
         overlay.fillStyle(0x000000, 0.8);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
@@ -1470,25 +1471,28 @@ export default class BattleAIScene extends Phaser.Scene {
         const centerY = this.cameras.main.centerY;
 
         const modal = this.add.graphics();
+        modal.setDepth(1001); // Higher depth than overlay
         modal.fillStyle(0xe74c3c, 0.95);
         modal.fillRoundedRect(centerX - 200, centerY - 100, 400, 200, 15);
         modal.lineStyle(2, 0xffffff, 0.3);
         modal.strokeRoundedRect(centerX - 200, centerY - 100, 400, 200, 15);
 
-        this.add.text(centerX, centerY - 60, '❌ Error', {
+        const errorTitle = this.add.text(centerX, centerY - 60, '❌ Error', {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
+        errorTitle.setDepth(1002); // Highest depth for text
 
-        this.add.text(centerX, centerY - 10, message, {
+        const errorMessage = this.add.text(centerX, centerY - 10, message, {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             alpha: 0.8,
             wordWrap: { width: 350 }
         }).setOrigin(0.5);
+        errorMessage.setDepth(1002); // Highest depth for text
 
         const okButton = this.add.text(centerX, centerY + 50, 'OK', {
             fontSize: '18px',
@@ -1498,9 +1502,12 @@ export default class BattleAIScene extends Phaser.Scene {
             padding: { x: 20, y: 8 }
         }).setOrigin(0.5);
         okButton.setInteractive();
+        okButton.setDepth(1002); // Highest depth for text
         okButton.on('pointerdown', () => {
             overlay.destroy();
             modal.destroy();
+            errorTitle.destroy();
+            errorMessage.destroy();
             okButton.destroy();
         });
     }
