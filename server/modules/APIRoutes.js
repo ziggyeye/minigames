@@ -400,6 +400,23 @@ export class APIRoutes {
       const result = await this.redisManager.saveCharacter(character);
 
       if (result.success) {
+        // Post character creation to Discord
+        // try {
+        //   if (this.discordManager && this.discordManager.isBotReady()) {
+        //     console.log(`📤 Posting character creation to Discord for user ${discordUserId}`);
+        //     const discordResult = await this.discordManager.postCharacterCreationToDiscord(discordUserId, result.character);
+        //     if (discordResult.success) {
+        //       console.log('✅ Character creation posted to Discord successfully');
+        //     } else {
+        //       console.warn('⚠️ Failed to post character creation to Discord:', discordResult.error);
+        //     }
+        //   } else {
+        //     console.log('ℹ️ Discord bot not available, skipping character creation post');
+        //   }
+        // } catch (discordError) {
+        //   console.warn('⚠️ Error posting character creation to Discord (non-critical):', discordError.message);
+        // }
+
         const response = {
           success: true,
           message: 'Character saved successfully',
@@ -584,6 +601,24 @@ export class APIRoutes {
       // Cache the result for idempotency (expires in 1 hour)
       if (this.redisManager.isReady()) {
         await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
+      }
+      
+      // Post battle summary to Discord (non-blocking)
+      try {
+       // if (this.discordManager && this.discordManager.isBotReady()) {
+          console.log(`📤 Posting battle summary to Discord for user ${discordUserId}`);
+          const discordResult = await this.discordManager.postBattleSummaryToDiscord(response, discordUserId);
+          if (discordResult.success) {
+            console.log('✅ Battle summary posted to Discord successfully');
+          } else {
+            console.warn('⚠️ Failed to post battle summary to Discord:', discordResult.error);
+          }
+        // } else {
+        //   console.log('ℹ️ Discord bot not available, skipping battle summary post');
+        // }
+      } catch (discordError) {
+        console.warn('⚠️ Error posting to Discord (non-critical):', discordError.message);
+        // Continue with battle response even if Discord fails
       }
       
       res.json(response);
@@ -1441,6 +1476,23 @@ Format your result as a single paragraph.`;
       const result = await this.redisManager.addBattleGems(discordUserId.trim(), amount);
       
       if (result.success) {
+        // Post to Discord when gems are successfully added
+        // try {
+        //   if (this.discordManager && this.discordManager.isBotReady()) {
+        //     console.log(`📤 Posting battle gems earned to Discord for user ${discordUserId}`);
+        //     const discordResult = await this.discordManager.postBattleGemsEarnedToDiscord(discordUserId, amount, result.newTotal);
+        //     if (discordResult.success) {
+        //       console.log('✅ Battle gems earned posted to Discord successfully');
+        //     } else {
+        //       console.warn('⚠️ Failed to post battle gems earned to Discord:', discordResult.error);
+        //     }
+        //   } else {
+        //     console.log('ℹ️ Discord bot not available, skipping battle gems earned post');
+        //   }
+        // } catch (discordError) {
+        //   console.warn('⚠️ Error posting battle gems earned to Discord (non-critical):', discordError.message);
+        // }
+
         res.json({
           success: true,
           message: result.message,

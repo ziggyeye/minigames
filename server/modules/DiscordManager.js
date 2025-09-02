@@ -477,6 +477,398 @@ export class DiscordManager {
   }
 
   /**
+   * Post battle summary to Discord channel
+   * @param {Object} battleData - Battle data object
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<Object>} Result object with success status and message
+   */
+  async postBattleSummaryToDiscord(battleData, discordUserId) {
+    try {
+      if (!this.isBotReady()) {
+        return {
+          success: false,
+          error: 'Discord bot is not ready'
+        };
+      }
+
+      console.log(`⚔️ Attempting to post battle summary to channel: ${this.channelId}`);
+
+      // Get Discord user information
+      let discordUser = null;
+      if (discordUserId) {
+        discordUser = await this.getDiscordUser(discordUserId);
+      }
+
+      // Create battle summary embed
+      const embed = this.createBattleSummaryEmbed(battleData, discordUser);
+
+      // Get Discord channel
+      const channel = await this.client.channels.fetch(this.channelId);
+      
+      if (!channel) {
+        return {
+          success: false,
+          error: 'Discord channel not found'
+        };
+      }
+
+      if (!channel.isTextBased()) {
+        return {
+          success: false,
+          error: 'Channel is not a text channel'
+        };
+      }
+
+      // Check bot permissions
+      const permissions = channel.permissionsFor(this.client.user);
+      if (!permissions.has('SendMessages')) {
+        return {
+          success: false,
+          error: 'Bot lacks permission to send messages'
+        };
+      }
+
+      // Send the embed
+      await channel.send({ embeds: [embed] });
+      
+      const userTag = discordUser ? ` (${discordUser.tag})` : '';
+      console.log(`✅ Battle summary posted to Discord: ${battleData.playerCharacter.name} vs ${battleData.aiCharacter.name}${userTag}`);
+      
+      return {
+        success: true,
+        message: 'Battle summary posted to Discord successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Error posting battle summary to Discord:', error);
+      
+      if (error.code === 10003) {
+        return {
+          success: false,
+          error: 'Invalid channel ID or bot lacks access to channel',
+          details: 'Make sure the channel ID is correct and the bot is in the server'
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Post battle gems earned to Discord channel
+   * @param {string} discordUserId - Discord user ID
+   * @param {number} amountEarned - Amount of gems earned
+   * @param {number} newTotal - New total after earning
+   * @returns {Promise<Object>} Result object with success status and message
+   */
+  async postBattleGemsEarnedToDiscord(discordUserId, amountEarned, newTotal) {
+    try {
+      if (!this.isBotReady()) {
+        return {
+          success: false,
+          error: 'Discord bot is not ready'
+        };
+      }
+
+      console.log(`💎 Attempting to post battle gems earned to channel: ${this.channelId}`);
+
+      // Get Discord user information
+      let discordUser = null;
+      if (discordUserId) {
+        discordUser = await this.getDiscordUser(discordUserId);
+      }
+
+      // Create battle gems earned embed
+      const embed = this.createBattleGemsEarnedEmbed(discordUserId, amountEarned, newTotal, discordUser);
+
+      // Get Discord channel
+      const channel = await this.client.channels.fetch(this.channelId);
+      
+      if (!channel) {
+        return {
+          success: false,
+          error: 'Discord channel not found'
+        };
+      }
+
+      if (!channel.isTextBased()) {
+        return {
+          success: false,
+          error: 'Channel is not a text channel'
+        };
+      }
+
+      // Check bot permissions
+      const permissions = channel.permissionsFor(this.client.user);
+      if (!permissions.has('SendMessages')) {
+        return {
+          success: false,
+          error: 'Bot lacks permission to send messages'
+        };
+      }
+
+      // Send the embed
+      await channel.send({ embeds: [embed] });
+      
+      const userTag = discordUser ? ` (${discordUser.tag})` : '';
+      console.log(`✅ Battle gems earned posted to Discord: ${amountEarned} gems earned${userTag}`);
+      
+      return {
+        success: true,
+        message: 'Battle gems earned posted to Discord successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Error posting battle gems earned to Discord:', error);
+      
+      if (error.code === 10003) {
+        return {
+          success: false,
+          error: 'Invalid channel ID or bot lacks access to channel',
+          details: 'Make sure the channel ID is correct and the bot is in the server'
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Post character creation to Discord channel
+   * @param {string} discordUserId - Discord user ID
+   * @param {Object} character - Character object
+   * @returns {Promise<Object>} Result object with success status and message
+   */
+  async postCharacterCreationToDiscord(discordUserId, character) {
+    try {
+      if (!this.isBotReady()) {
+        return {
+          success: false,
+          error: 'Discord bot is not ready'
+        };
+      }
+
+      console.log(`🎭 Attempting to post character creation to channel: ${this.channelId}`);
+
+      // Get Discord user information
+      let discordUser = null;
+      if (discordUserId) {
+        discordUser = await this.getDiscordUser(discordUserId);
+      }
+
+      // Create character creation embed
+      const embed = this.createCharacterCreationEmbed(discordUserId, character, discordUser);
+
+      // Get Discord channel
+      const channel = await this.client.channels.fetch(this.channelId);
+      
+      if (!channel) {
+        return {
+          success: false,
+          error: 'Discord channel not found'
+        };
+      }
+
+      if (!channel.isTextBased()) {
+        return {
+          success: false,
+          error: 'Channel is not a text channel'
+        };
+      }
+
+      // Check bot permissions
+      const permissions = channel.permissionsFor(this.client.user);
+      if (!permissions.has('SendMessages')) {
+        return {
+          success: false,
+          error: 'Bot lacks permission to send messages'
+        };
+      }
+
+      // Send the embed
+      await channel.send({ embeds: [embed] });
+      
+      const userTag = discordUser ? ` (${discordUser.tag})` : '';
+      console.log(`✅ Character creation posted to Discord: ${character.characterName} created${userTag}`);
+      
+      return {
+        success: true,
+        message: 'Character creation posted to Discord successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Error posting character creation to Discord:', error);
+      
+      if (error.code === 10003) {
+        return {
+          success: false,
+          error: 'Invalid channel ID or bot lacks access to channel',
+          details: 'Make sure the channel ID is correct and the bot is in the server'
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Create character creation embed
+   * @param {string} discordUserId - Discord user ID
+   * @param {Object} character - Character object
+   * @param {Object} discordUser - Discord user object (optional)
+   * @returns {EmbedBuilder} Discord embed
+   */
+  createCharacterCreationEmbed(discordUserId, character, discordUser = null) {
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setColor('#3498db') // Blue color for character creation
+      .setTitle(`🎭 New Character Created!`)
+      .setDescription(`**${character.characterName}** has entered the arena!`)
+      .setTimestamp()
+      .setFooter({ text: 'Battle AI Minigame' });
+
+    // Add character details
+    embed.addFields({
+      name: '👤 Character Details',
+      value: `**Name:** ${character.characterName}\n**Description:** ${character.description}`,
+      inline: false
+    });
+
+    // Add character stats if available
+    if (character.stats) {
+      const statsText = Object.entries(character.stats)
+        .map(([stat, value]) => `${stat}: ${value}`)
+        .join(' | ');
+      
+      embed.addFields({
+        name: '⚔️ Character Stats',
+        value: statsText,
+        inline: false
+      });
+    }
+
+    // Add Discord user info if available
+    if (discordUser) {
+      embed.setAuthor({
+        name: discordUser.username,
+        iconURL: discordUser.displayAvatarURL()
+      });
+    }
+
+    return embed;
+  }
+
+  /**
+   * Create battle gems earned embed
+   * @param {string} discordUserId - Discord user ID
+   * @param {number} amountEarned - Amount of gems earned
+   * @param {number} newTotal - New total after earning
+   * @param {Object} discordUser - Discord user object (optional)
+   * @returns {EmbedBuilder} Discord embed
+   */
+  createBattleGemsEarnedEmbed(discordUserId, amountEarned, newTotal, discordUser = null) {
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setColor('#f39c12') // Orange color for gems
+      .setTitle(`💎 Battle Gems Earned!`)
+      .setDescription(`**${amountEarned} battle gems** have been added to your collection!`)
+      .setTimestamp()
+      .setFooter({ text: 'Battle AI Minigame' });
+
+    // Add gem details
+    embed.addFields({
+      name: '💎 Gem Details',
+      value: `**Gems Earned:** +${amountEarned}\n**New Total:** ${newTotal}/5\n**Status:** ${newTotal >= 5 ? '🟢 Max Capacity Reached' : '🟡 Can Earn More'}`,
+      inline: false
+    });
+
+    // Add Discord user info if available
+    if (discordUser) {
+      embed.setAuthor({
+        name: discordUser.username,
+        iconURL: discordUser.displayAvatarURL()
+      });
+    }
+
+    return embed;
+  }
+
+  /**
+   * Create battle summary embed
+   * @param {Object} battleData - Battle data object
+   * @param {Object} discordUser - Discord user object (optional)
+   * @returns {EmbedBuilder} Discord embed
+   */
+  createBattleSummaryEmbed(battleData, discordUser = null) {
+    const { playerCharacter, aiCharacter, battleResult, battleStats, characterLevel } = battleData;
+    
+    // Determine winner and loser
+    const isPlayerWinner = battleResult.winner === playerCharacter.name;
+    const winner = isPlayerWinner ? playerCharacter.name : aiCharacter.name;
+    const loser = isPlayerWinner ? aiCharacter.name : playerCharacter.name;
+    
+    // Set embed color based on result
+    const embedColor = isPlayerWinner ? '#00ff00' : '#ff0000';
+    
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setColor(embedColor)
+      .setTitle(`⚔️ Battle Summary: ${playerCharacter.name} vs ${aiCharacter.name}`)
+      .setDescription(`**${winner}** emerged victorious!`)
+      .setTimestamp()
+      .setFooter({ text: 'Battle AI Minigame' });
+
+    // Add player character info
+    embed.addFields({
+      name: '🎭 Player Character',
+      value: `**Name:** ${playerCharacter.name}\n**Description:** ${playerCharacter.description}\n**Level:** ${characterLevel}\n**Stats:** STR:${playerCharacter.stats?.STR || 'N/A'} DEX:${playerCharacter.stats?.DEX || 'N/A'} CON:${playerCharacter.stats?.CON || 'N/A'} INT:${playerCharacter.stats?.INT || 'N/A'}`,
+      inline: true
+    });
+
+    // Add AI character info
+    embed.addFields({
+      name: '🤖 AI Opponent',
+      value: `**Name:** ${aiCharacter.name}\n**Description:** ${aiCharacter.description}\n**Stats:** STR:${aiCharacter.stats?.STR || 'N/A'} DEX:${aiCharacter.stats?.DEX || 'N/A'} CON:${aiCharacter.stats?.CON || 'N/A'} INT:${aiCharacter.stats?.INT || 'N/A'}`,
+      inline: true
+    });
+
+    // Add battle result
+    embed.addFields({
+      name: '🏆 Battle Result',
+      value: `**Winner:** ${winner}\n**Loser:** ${loser}\n**Narrative:** ${battleResult.description || 'No description available'}`,
+      inline: false
+    });
+
+    // Add battle statistics
+    if (battleStats) {
+      embed.addFields({
+        name: '📊 Battle Statistics',
+        value: `**Total Battles:** ${battleStats.totalBattles}\n**Wins:** ${battleStats.wins}\n**Losses:** ${battleStats.losses}\n**Win Rate:** ${battleStats.winRate?.toFixed(1) || 'N/A'}%`,
+        inline: false
+      });
+    }
+
+    // Add Discord user info if available
+    if (discordUser) {
+      embed.setAuthor({
+        name: discordUser.username,
+        iconURL: discordUser.displayAvatarURL()
+      });
+    }
+
+    return embed;
+  }
+
+  /**
    * Post score to Discord channel
    * @param {Object} scoreData - Score data object
    * @param {Array} topScores - Top 5 high scores
