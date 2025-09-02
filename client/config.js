@@ -7,7 +7,9 @@ const config = {
       saveCharacterEndpoint: '/api/saveCharacter',
       getUserCharactersEndpoint: '/api/characters/:discordUserId',
       battleSimulationEndpoint: '/api/battle/simulate',
-      battleStatsEndpoint: '/api/battle/stats/:discordUserId'
+      battleStatsEndpoint: '/api/battle/stats/:discordUserId',
+      addBattleGemsEndpoint: '/api/battleGems/add',
+      getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
     },
     production: {
       serverUrl: '/server',
@@ -16,7 +18,9 @@ const config = {
       saveCharacterEndpoint: '/api/saveCharacter',
       getUserCharactersEndpoint: '/api/characters/:discordUserId',
       battleSimulationEndpoint: '/api/battle/simulate',
-      battleStatsEndpoint: '/api/battle/stats/:discordUserId'
+      battleStatsEndpoint: '/api/battle/stats/:discordUserId',
+      addBattleGemsEndpoint: '/api/battleGems/add',
+      getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
     }
   };
 
@@ -37,7 +41,9 @@ const config = {
     saveCharacter: getApiUrl(currentConfig.saveCharacterEndpoint),
     getUserCharacters: getApiUrl(currentConfig.getUserCharactersEndpoint),
     battleSimulation: getApiUrl(currentConfig.battleSimulationEndpoint),
-    battleStats: getApiUrl(currentConfig.battleStatsEndpoint)
+    battleStats: getApiUrl(currentConfig.battleStatsEndpoint),
+    addBattleGems: getApiUrl(currentConfig.addBattleGemsEndpoint),
+    getBattleGems: getApiUrl(currentConfig.getBattleGemsEndpoint)
   };
   
   export default currentConfig;

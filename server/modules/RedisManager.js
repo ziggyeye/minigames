@@ -598,6 +598,109 @@ export class RedisManager {
   }
 
   /**
+   * Get battle gems for a user
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<number>} Number of battle gems
+   */
+  async getBattleGems(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, returning default battle gems');
+        return 0;
+      }
+
+      const gemsKey = `minigames:battle_gems:${discordUserId}`;
+      const gems = await this.client.get(gemsKey);
+      
+      return gems ? parseInt(gems) : 0;
+
+    } catch (error) {
+      console.error('❌ Error getting battle gems:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Add battle gems to a user (with max limit enforcement)
+   * @param {string} discordUserId - Discord user ID
+   * @param {number} amount - Amount to add
+   * @returns {Promise<{success: boolean, newTotal: number, message: string}>}
+   */
+  async addBattleGems(discordUserId, amount) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping battle gems addition');
+        return { success: false, newTotal: 0, message: 'Redis not available' };
+      }
+
+      const gemsKey = `minigames:battle_gems:${discordUserId}`;
+      const currentGems = await this.getBattleGems(discordUserId);
+      const newTotal = Math.min(currentGems + amount, 5); // Max 5 gems
+      
+      if (newTotal === currentGems) {
+        return { 
+          success: false, 
+          newTotal: currentGems, 
+          message: 'Maximum battle gems (5) already reached' 
+        };
+      }
+
+      await this.client.set(gemsKey, newTotal);
+      console.log(`💎 Added ${amount} battle gems to ${discordUserId}. New total: ${newTotal}`);
+      
+      return { 
+        success: true, 
+        newTotal: newTotal, 
+        message: `Added ${amount} battle gems. New total: ${newTotal}` 
+      };
+
+    } catch (error) {
+      console.error('❌ Error adding battle gems:', error);
+      return { success: false, newTotal: 0, message: 'Failed to add battle gems' };
+    }
+  }
+
+  /**
+   * Spend battle gems for a user
+   * @param {string} discordUserId - Discord user ID
+   * @param {number} amount - Amount to spend
+   * @returns {Promise<{success: boolean, newTotal: number, message: string}>}
+   */
+  async spendBattleGems(discordUserId, amount) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping battle gems spending');
+        return { success: false, newTotal: 0, message: 'Redis not available' };
+      }
+
+      const gemsKey = `minigames:battle_gems:${discordUserId}`;
+      const currentGems = await this.getBattleGems(discordUserId);
+      
+      if (currentGems < amount) {
+        return { 
+          success: false, 
+          newTotal: currentGems, 
+          message: `Insufficient battle gems. You have ${currentGems}, need ${amount}` 
+        };
+      }
+
+      const newTotal = currentGems - amount;
+      await this.client.set(gemsKey, newTotal);
+      console.log(`💎 Spent ${amount} battle gems from ${discordUserId}. New total: ${newTotal}`);
+      
+      return { 
+        success: true, 
+        newTotal: newTotal, 
+        message: `Spent ${amount} battle gems. New total: ${newTotal}` 
+      };
+
+    } catch (error) {
+      console.error('❌ Error spending battle gems:', error);
+      return { success: false, newTotal: 0, message: 'Failed to spend battle gems' };
+    }
+  }
+
+  /**
    * Get battle statistics for a user
    * @param {string} discordUserId - Discord user ID
    * @returns {Promise<Object>} Battle statistics

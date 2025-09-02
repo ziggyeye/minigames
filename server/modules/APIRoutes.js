@@ -48,6 +48,10 @@ export class APIRoutes {
     
     // Battle statistics endpoints
     app.get('/api/battle/stats/:discordUserId', this.handleGetBattleStats.bind(this));
+    
+    // Battle gems endpoints
+    app.post('/api/battleGems/add', this.handleAddBattleGems.bind(this));
+    app.get('/api/battleGems/:discordUserId', this.handleGetBattleGems.bind(this));
 
   }
 
@@ -445,6 +449,9 @@ export class APIRoutes {
       // Get battle cooldown status
       const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
       
+      // Get battle gems count
+      const battleGems = await this.redisManager.getBattleGems(discordUserId.trim());
+      
       res.json({
         success: true,
         discordUserId: discordUserId.trim(),
@@ -455,7 +462,8 @@ export class APIRoutes {
           onCooldown: cooldownStatus.onCooldown,
           timeRemaining: cooldownStatus.timeRemaining,
           cooldownExpiry: cooldownStatus.cooldownExpiry ? cooldownStatus.cooldownExpiry.toISOString() : null
-        }
+        },
+        battleGems: battleGems
       });
     } catch (error) {
       console.error('❌ Error getting user characters:', error);
@@ -470,17 +478,38 @@ export class APIRoutes {
    */
   async handleBattleSimulation(req, res) {
     try {
-      const { clientCharacter, discordUserId } = req.body;
+      const { clientCharacter, discordUserId, useBattleGem = false } = req.body;
       
       // Check battle cooldown first
       const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
       
       if (cooldownStatus.onCooldown) {
-        const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
-        return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
-          cooldownExpiry: cooldownStatus.cooldownExpiry,
-          timeRemaining: cooldownStatus.timeRemaining
-        });
+        if (useBattleGem) {
+          // Check if user has enough battle gems
+          const currentGems = await this.redisManager.getBattleGems(discordUserId.trim());
+          if (currentGems < 1) {
+            const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+            return this.sendErrorResponse(res, 429, `Battle cooldown active and insufficient battle gems. Please wait ${timeRemainingSeconds} seconds or obtain more battle gems.`, {
+              cooldownExpiry: cooldownStatus.cooldownExpiry,
+              timeRemaining: cooldownStatus.timeRemaining,
+              battleGems: currentGems
+            });
+          }
+          
+          // Spend 1 battle gem to bypass cooldown
+          const spendResult = await this.redisManager.spendBattleGems(discordUserId.trim(), 1);
+          if (!spendResult.success) {
+            return this.sendErrorResponse(res, 400, spendResult.message);
+          }
+          
+          console.log(`💎 User ${discordUserId} spent 1 battle gem to bypass cooldown`);
+        } else {
+          const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+          return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
+            cooldownExpiry: cooldownStatus.cooldownExpiry,
+            timeRemaining: cooldownStatus.timeRemaining
+          });
+        }
       }
 
       const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), 10);
@@ -529,6 +558,9 @@ export class APIRoutes {
       // Set battle cooldown
       const cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
 
+      // Get updated battle gems count
+      const battleGems = await this.redisManager.getBattleGems(discordUserId);
+
       const response = {
         success: true,
         playerCharacter: playerCharacter,
@@ -537,6 +569,7 @@ export class APIRoutes {
         battleStats: battleStats,
         characterLevel: characterLevel,
         cooldownExpiry: cooldownExpiry.toISOString(),
+        battleGems: battleGems,
         timestamp: new Date().toISOString()
       };
       
@@ -1607,5 +1640,72 @@ Format your result as a single paragraph.`;
     }
 
     res.status(statusCode).json(response);
+  }
+
+  /**
+   * Handle adding battle gems to a user
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleAddBattleGems(req, res) {
+    try {
+      const { discordUserId, amount = 5 } = req.body;
+      
+      if (!discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required field: discordUserId');
+      }
+
+      console.log(`💎 Adding ${amount} battle gems to user: ${discordUserId}`);
+
+      const result = await this.redisManager.addBattleGems(discordUserId.trim(), amount);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          battleGems: result.newTotal,
+          added: amount
+        });
+      } else {
+        res.json({
+          success: false,
+          message: result.message,
+          battleGems: result.newTotal
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Error adding battle gems:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle getting battle gems for a user
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetBattleGems(req, res) {
+    try {
+      const { discordUserId } = req.params;
+      
+      if (!discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required field: discordUserId');
+      }
+
+      console.log(`💎 Getting battle gems for user: ${discordUserId}`);
+
+      const battleGems = await this.redisManager.getBattleGems(discordUserId.trim());
+      
+      res.json({
+        success: true,
+        discordUserId: discordUserId.trim(),
+        battleGems: battleGems
+      });
+
+    } catch (error) {
+      console.error('❌ Error getting battle gems:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
   }
 }
