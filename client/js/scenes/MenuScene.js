@@ -81,7 +81,7 @@ export default class MenuScene extends Phaser.Scene {
 
     displayUserName(username) {
         const centerX = this.cameras.main.centerX;
-        const userY = this.cameras.main.height-100; // Position below the title
+        const userY = this.cameras.main.height-200; // Position below the title
 
         // User welcome text
         this.userNameText = this.add.text(centerX, userY, `Welcome, ${username}!`, {
@@ -176,6 +176,10 @@ export default class MenuScene extends Phaser.Scene {
         // Coming Soon Card
         this.createGameCard(centerX, 500, '🚧', 'More Games Coming!', 
             'We\'re working on more exciting minigames!', 'coming-soon');
+
+        // Add privacy policy and terms of service links
+        this.createPrivacyPolicyLink();
+        this.createTermsOfServiceLink();
     }
 
     createGameCard(x, y, icon, title, description, gameType) {
@@ -252,6 +256,66 @@ export default class MenuScene extends Phaser.Scene {
         
         card.on('pointerdown', () => {
             this.handleGameSelection(card.gameType);
+        });
+    }
+
+    createPrivacyPolicyLink() {
+        const centerX = this.cameras.main.centerX;
+        const privacyY = this.cameras.main.height - 50;
+
+        // Privacy policy link
+        const privacyLink = this.add.text(centerX, privacyY, '🔒 Privacy Policy', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            alpha: 0.8,
+            stroke: '#000000',
+            strokeThickness: 1
+        }).setOrigin(0.5);
+
+        // Make it interactive
+        privacyLink.setInteractive();
+        privacyLink.on('pointerover', () => {
+            privacyLink.setAlpha(1);
+            privacyLink.setColor('#667eea');
+        });
+        privacyLink.on('pointerout', () => {
+            privacyLink.setAlpha(0.8);
+            privacyLink.setColor('#ffffff');
+        });
+        privacyLink.on('pointerdown', () => {
+            // Open privacy policy in new tab
+            window.open('/privacy-policy.html', '_blank');
+        });
+    }
+
+    createTermsOfServiceLink() {
+        const centerX = this.cameras.main.centerX;
+        const termsY = this.cameras.main.height - 80;
+
+        // Terms of service link
+        const termsLink = this.add.text(centerX, termsY, '📜 Terms of Service', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            alpha: 0.8,
+            stroke: '#000000',
+            strokeThickness: 1
+        }).setOrigin(0.5);
+
+        // Make it interactive
+        termsLink.setInteractive();
+        termsLink.on('pointerover', () => {
+            termsLink.setAlpha(1);
+            termsLink.setColor('#667eea');
+        });
+        termsLink.on('pointerout', () => {
+            termsLink.setAlpha(0.8);
+            termsLink.setColor('#ffffff');
+        });
+        termsLink.on('pointerdown', () => {
+            // Open terms of service in new tab
+            window.open('/terms-of-service.html', '_blank');
         });
     }
 

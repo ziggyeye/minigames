@@ -181,6 +181,32 @@ export default class CircusScene extends Phaser.Scene {
         backButton.on('pointerdown', () => {
             this.scene.start('MenuScene');
         });
+
+        // Privacy policy link
+        const privacyLink = this.add.text(this.cameras.main.width - 16, this.cameras.main.height - 40, '🔒 Privacy', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#667eea',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(1, 0);
+        privacyLink.setInteractive();
+        privacyLink.on('pointerdown', () => {
+            window.open('/privacy-policy.html', '_blank');
+        });
+
+        // Terms of service link
+        const termsLink = this.add.text(this.cameras.main.width - 16, this.cameras.main.height - 80, '📜 Terms', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#764ba2',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(1, 0);
+        termsLink.setInteractive();
+        termsLink.on('pointerdown', () => {
+            window.open('/terms-of-service.html', '_blank');
+        });
         
         // Game over text (hidden initially)
         this.gameOverText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 50, 'GAME OVER!', {
