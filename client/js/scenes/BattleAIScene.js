@@ -634,8 +634,8 @@ export default class BattleAIScene extends Phaser.Scene {
         overlay.fillStyle(0x000000, 0.8);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
-        const centerX = this.game.scale.displaySize.width / 2;
-        const centerY = this.game.scale.displaySize.height / 2;
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
 
         // Create modal background
         const modal = this.add.graphics();
@@ -691,35 +691,35 @@ export default class BattleAIScene extends Phaser.Scene {
         cancelButton.setInteractive();
 
         // Resize handler to keep elements centered
-        const updatePositions = () => {
-            const newCenterX = this.game.scale.displaySize.width / 2;
-            const newCenterY = this.game.scale.displaySize.height / 2;
+        // const updatePositions = () => {
+        //     const newCenterX = this.cameras.main.width / 2;
+        //     const newCenterY = this.cameras.main.height / 2;
             
-            // Update overlay
-            overlay.clear();
-            overlay.fillStyle(0x000000, 0.8);
-            overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+        //     // Update overlay
+        //     overlay.clear();
+        //     overlay.fillStyle(0x000000, 0.8);
+        //     overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
             
-            // Update modal
-            modal.clear();
-            modal.fillStyle(0x2c3e50, 0.95);
-            modal.fillRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
-            modal.lineStyle(2, 0xffffff, 0.3);
-            modal.strokeRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
+        //     // Update modal
+        //     modal.clear();
+        //     modal.fillStyle(0x2c3e50, 0.95);
+        //     modal.fillRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
+        //     modal.lineStyle(2, 0xffffff, 0.3);
+        //     modal.strokeRoundedRect(newCenterX - 200, newCenterY - 100, 400, 200, 15);
             
-            // Update text positions
-            titleText.setPosition(newCenterX, newCenterY - 70);
-            inputText.setPosition(newCenterX, newCenterY + 20);
-            saveButton.setPosition(newCenterX - 60, newCenterY + 40);
-            cancelButton.setPosition(newCenterX + 60, newCenterY + 40);
-        };
+        //     // Update text positions
+        //     titleText.setPosition(newCenterX, newCenterY - 70);
+        //     inputText.setPosition(newCenterX, newCenterY + 20);
+        //     saveButton.setPosition(newCenterX - 60, newCenterY + 40);
+        //     cancelButton.setPosition(newCenterX + 60, newCenterY + 40);
+        // };
 
-        // Listen for resize events
-        this.scale.on('resize', updatePositions);
+        // // Listen for resize events
+        // this.scale.on('resize', updatePositions);
 
         // Event handlers
         const cleanup = () => {
-            this.scale.off('resize', updatePositions);
+           // this.scale.off('resize', updatePositions);
             overlay.destroy();
             modal.destroy();
             titleText.destroy();
@@ -772,8 +772,8 @@ export default class BattleAIScene extends Phaser.Scene {
         overlay.fillStyle(0x000000, 0.8);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
 
-        const centerX = this.game.scale.displaySize.width / 2;
-        const centerY = this.game.scale.displaySize.height / 2;
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
 
         // Create modal background
         const modal = this.add.graphics();
@@ -840,36 +840,36 @@ export default class BattleAIScene extends Phaser.Scene {
         cancelButton.setInteractive();
 
         // Resize handler to keep elements centered
-        const updatePositions = () => {
-            const newCenterX = this.game.scale.displaySize.width / 2;
-            const newCenterY = this.game.scale.displaySize.height / 2;
+        // const updatePositions = () => {
+        //     const newCenterX = this.cameras.main.width / 2;
+        //     const newCenterY = this.cameras.main.height / 2;
             
-            // Update overlay
-            overlay.clear();
-            overlay.fillStyle(0x000000, 0.8);
-            overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+        //     // Update overlay
+        //     overlay.clear();
+        //     overlay.fillStyle(0x000000, 0.8);
+        //     overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
             
-            // Update modal
-            modal.clear();
-            modal.fillStyle(0x2c3e50, 0.95);
-            modal.fillRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
-            modal.lineStyle(2, 0xffffff, 0.3);
-            modal.strokeRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
+        //     // Update modal
+        //     modal.clear();
+        //     modal.fillStyle(0x2c3e50, 0.95);
+        //     modal.fillRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
+        //     modal.lineStyle(2, 0xffffff, 0.3);
+        //     modal.strokeRoundedRect(newCenterX - 250, newCenterY - 150, 500, 300, 15);
             
-            // Update text positions
-            titleText.setPosition(newCenterX, newCenterY - 120);
-            instructionsText.setPosition(newCenterX, newCenterY - 80);
-            inputText.setPosition(newCenterX, newCenterY + 30);
-            saveButton.setPosition(newCenterX - 80, newCenterY + 80);
-            cancelButton.setPosition(newCenterX + 80, newCenterY + 80);
-        };
+        //     // Update text positions
+        //     titleText.setPosition(newCenterX, newCenterY - 120);
+        //     instructionsText.setPosition(newCenterX, newCenterY - 80);
+        //     inputText.setPosition(newCenterX, newCenterY + 30);
+        //     saveButton.setPosition(newCenterX - 80, newCenterY + 80);
+        //     cancelButton.setPosition(newCenterX + 80, newCenterY + 80);
+        // };
 
-        // Listen for resize events
-        this.scale.on('resize', updatePositions);
+        // // Listen for resize events
+        // this.scale.on('resize', updatePositions);
 
         // Event handlers
         const cleanup = () => {
-            this.scale.off('resize', updatePositions);
+            //this.scale.off('resize', updatePositions);
             overlay.destroy();
             modal.destroy();
             titleText.destroy();
