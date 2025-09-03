@@ -245,7 +245,7 @@ export default class BattleAIScene extends Phaser.Scene {
             
             if (result.success && result.characters) {
                 this.userCharacters = result.characters;
-                console.log(`✅ Loaded ${this.userCharacters.length} characters`);
+                console.log(`✅ Loaded ${this.userCharacters.length} characters`, this.userCharacters);
                 
                 // Handle cooldown status from server
                 if (result.cooldownStatus) {
@@ -761,6 +761,16 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showNameInput() {
+
+        const blocker = this.add.rectangle(
+            this.cameras.main.width/2, this.cameras.main.height/2, this.cameras.main.width, this.cameras.main.height,
+            0x000000,
+            0.5 // opacity (0 = invisible, 1 = solid black)
+          );
+          
+          // Make it interactive so it captures all clicks
+          blocker.setInteractive();
+
         // Create overlay
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.8);
@@ -858,13 +868,14 @@ export default class BattleAIScene extends Phaser.Scene {
             inputText.destroy();
             saveButton.destroy();
             cancelButton.destroy();
+            blocker.destroy();
         };
 
         // Handle Enter key
         inputText.on('keydown-ENTER', () => {
             const name = inputText.text.trim();
             if (name) {
-                this.playerCharacter = { name: name, description: '' };
+                this.playerCharacter = { name: name, description: this.playerCharacter == null ? '' : this.playerCharacter.description };
                 this.nameText.setText(name);
                 this.nameText.setColor('#ffffff');
             }
@@ -877,7 +888,7 @@ export default class BattleAIScene extends Phaser.Scene {
         saveButton.on('pointerdown', () => {
             const name = inputText.text.trim();
             if (name) {
-                this.playerCharacter = { name: name, description: '' };
+                this.playerCharacter = { name: name, description: this.playerCharacter == null ? '' : this.playerCharacter.description };
                 this.nameText.setText(name);
                 this.nameText.setColor('#ffffff');
             }
@@ -899,6 +910,16 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showDescriptionInput() {
+
+        const blocker = this.add.rectangle(
+            this.cameras.main.width/2, this.cameras.main.height/2, this.cameras.main.width, this.cameras.main.height,
+            0x000000,
+            0.5 // opacity (0 = invisible, 1 = solid black)
+          );
+          
+          // Make it interactive so it captures all clicks
+          blocker.setInteractive();
+
         // Create overlay
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.8);
@@ -1009,6 +1030,7 @@ export default class BattleAIScene extends Phaser.Scene {
             inputText.destroy();
             saveButton.destroy();
             cancelButton.destroy();
+            blocker.destroy();
         };
 
         // Handle Ctrl+Enter key
@@ -1058,6 +1080,15 @@ export default class BattleAIScene extends Phaser.Scene {
     async startBattle() {
         if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
             this.showError('Please enter both name and description for your character!');
+            return;
+        }
+
+        console.log("name ", this.playerCharacter.name);
+
+        console.log("points: ", this.totalPointsToAllocate - this.allocatedPoints);
+
+        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
+            this.showError('Spend all points before battling!');
             return;
         }
 
@@ -1487,6 +1518,15 @@ export default class BattleAIScene extends Phaser.Scene {
     }
 
     showMessage(message) {
+
+        const blocker = this.add.rectangle(
+            this.cameras.main.width/2, this.cameras.main.height/2, this.cameras.main.width, this.cameras.main.height,
+            0x000000,
+            0.5 // opacity (0 = invisible, 1 = solid black)
+          );
+
+          blocker.setInteractive();
+
         // Create error modal with high depth to ensure it's on top
         const overlay = this.add.graphics();
         overlay.setDepth(1000); // High depth to be above all other UI
@@ -1535,10 +1575,19 @@ export default class BattleAIScene extends Phaser.Scene {
             errorTitle.destroy();
             errorMessage.destroy();
             okButton.destroy();
+            blocker.destroy();
         });
     }
 
     showError(message) {
+
+        const blocker = this.add.rectangle(
+            this.cameras.main.width/2, this.cameras.main.height/2, this.cameras.main.width, this.cameras.main.height,
+            0x000000,
+            0.5 // opacity (0 = invisible, 1 = solid black)
+          );
+
+          blocker.setInteractive();
         // Create error modal with high depth to ensure it's on top
         const overlay = this.add.graphics();
         overlay.setDepth(1000); // High depth to be above all other UI
@@ -1587,6 +1636,7 @@ export default class BattleAIScene extends Phaser.Scene {
             errorTitle.destroy();
             errorMessage.destroy();
             okButton.destroy();
+            blocker.destroy();
         });
     }
 
@@ -1626,6 +1676,11 @@ export default class BattleAIScene extends Phaser.Scene {
             return;
         }
 
+        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
+            this.showError('Spend all points before battling!');
+            return;
+        }
+
         // Start battle using a gem to bypass cooldown
         this.isLoading = true;
         this.showLoadingScreen();
@@ -1640,6 +1695,11 @@ export default class BattleAIScene extends Phaser.Scene {
     async startNewBattleWithGem() {
         if (this.battleGems < 1) {
             this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
+            return;
+        }
+
+        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
+            this.showError('Spend all points before battling!');
             return;
         }
 
