@@ -370,22 +370,26 @@ export default class BattleAIScene extends Phaser.Scene {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
+        const boxWidth = 600;
+        const boxHeight = 800;
+
         // Create form background
         const formBg = this.add.graphics();
         formBg.fillStyle(0xffffff, 0.1);
-        formBg.fillRoundedRect(centerX - 300, centerY - 300, 600, 600, 15);
+        formBg.fillRoundedRect(centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight, 15);
         formBg.lineStyle(2, 0xffffff, 0.3);
-        formBg.strokeRoundedRect(centerX - 300, centerY - 300, 600, 600, 15);
+        formBg.strokeRoundedRect(centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight, 15);
 
+        let top = centerY - boxHeight/2 +40;
         // Title
-        this.add.text(centerX, centerY - 250, 'Create Your Character', {
+        this.add.text(centerX, top, 'Create Your Character', {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        let top = centerY - 250 + 40;
+        top += 40;
 
         // Server handles AI integration - no API key needed on client
 
