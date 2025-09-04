@@ -47,17 +47,41 @@ export default class BattleAIScene extends Phaser.Scene {
         this.load.image('background', '/assets/background.svg');
     }
 
-    create() {
+    create(data) {
+        // Store data passed from CharacterSelectionScene
+        this.selectedCharacter = data?.selectedCharacter || null;
+        this.isNewCharacter = data?.isNewCharacter || false;
+        
+        console.log('🎭 BattleAIScene started with:', { selectedCharacter: this.selectedCharacter, isNewCharacter: this.isNewCharacter });
+        
         // Create background
         this.createBackground();
         
         // Create UI elements
         this.createUI();
         
-        // Load user characters and initialize character creation
-        this.loadUserCharacters();
+        // Initialize based on whether we have a selected character or not
+        if (this.selectedCharacter && !this.isNewCharacter) {
+            // Use the selected character
+            this.playerCharacter = {
+                name: this.selectedCharacter.characterName,
+                description: this.selectedCharacter.description,
+                stats: this.selectedCharacter.stats || { STR: 1, DEX: 1, CON: 1, INT: 1 }
+            };
+            console.log('✅ Using selected character:', this.playerCharacter);
+            
+            // Load character level and battle stats
+            this.loadCharacterLevel(this.playerCharacter.name);
+            this.loadBattleStatsFromServer();
+            
+            // Show character creation with pre-filled data
+            this.showCharacterCreation();
+        } else {
+            // Load user characters for new character creation
+            this.loadUserCharacters();
+        }
         
-        // Optionally load battle statistics for display
+        // Always load battle statistics
         this.loadBattleStatsFromServer();
     }
 
@@ -336,34 +360,34 @@ export default class BattleAIScene extends Phaser.Scene {
         });
         backButton.setInteractive();
         backButton.on('pointerdown', () => {
-            this.scene.start('MenuScene');
+            this.scene.start('CharacterSelectionScene');
         });
 
         // Privacy policy link
-        const privacyLink = this.add.text(this.cameras.main.width - 16, 16, '🔒 Privacy', {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#667eea',
-            padding: { x: 10, y: 5 }
-        }).setOrigin(1, 0);
-        privacyLink.setInteractive();
-        privacyLink.on('pointerdown', () => {
-            window.open('/privacy-policy.html', '_blank');
-        });
+        // const privacyLink = this.add.text(this.cameras.main.width - 16, 16, '🔒 Privacy', {
+        //     fontSize: '16px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: '#667eea',
+        //     padding: { x: 10, y: 5 }
+        // }).setOrigin(1, 0);
+        // privacyLink.setInteractive();
+        // privacyLink.on('pointerdown', () => {
+        //     window.open('/privacy-policy.html', '_blank');
+        // });
 
-        // Terms of service link
-        const termsLink = this.add.text(this.cameras.main.width - 16, 50, '📜 Terms', {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#764ba2',
-            padding: { x: 10, y: 5 }
-        }).setOrigin(1, 0);
-        termsLink.setInteractive();
-        termsLink.on('pointerdown', () => {
-            window.open('/terms-of-service.html', '_blank');
-        });
+        // // Terms of service link
+        // const termsLink = this.add.text(this.cameras.main.width - 16, 50, '📜 Terms', {
+        //     fontSize: '16px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: '#764ba2',
+        //     padding: { x: 10, y: 5 }
+        // }).setOrigin(1, 0);
+        // termsLink.setInteractive();
+        // termsLink.on('pointerdown', () => {
+        //     window.open('/terms-of-service.html', '_blank');
+        // });
     }
 
     showCharacterCreation() {
@@ -1250,7 +1274,7 @@ export default class BattleAIScene extends Phaser.Scene {
         const centerY = this.cameras.main.centerY;
 
         // Loading text
-        const loadingText = '🤖 Server Battle Analysis...';
+        const loadingText = '🤖 Battle Analysis...';
         this.add.text(centerX, centerY - 50, loadingText, {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
@@ -1501,7 +1525,7 @@ export default class BattleAIScene extends Phaser.Scene {
         }).setOrigin(0.5);
         backButton.setInteractive();
         backButton.on('pointerdown', () => {
-            this.scene.start('MenuScene');
+            this.scene.start('CharacterSelectionScene');
         });
 
         // If content is too tall, adjust the modal height

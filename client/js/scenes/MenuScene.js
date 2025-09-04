@@ -391,7 +391,7 @@ export default class MenuScene extends Phaser.Scene {
                 this.scene.start('CircusScene');
                 break;
             case 'battle-ai':
-                this.scene.start('BattleAIScene');
+                this.scene.start('CharacterSelectionScene');
                 break;
             case 'coming-soon':
                 // Show coming soon message
