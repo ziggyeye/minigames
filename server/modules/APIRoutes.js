@@ -42,6 +42,7 @@ export class APIRoutes {
     // Character management endpoints
     app.post('/api/saveCharacter', this.handleSaveCharacter.bind(this));
     app.get('/api/characters/:discordUserId', this.handleGetUserCharacters.bind(this));
+    app.delete('/api/characters/delete', this.handleDeleteCharacter.bind(this));
     
     // Battle simulation endpoint
     app.post('/api/battle/simulate', this.handleBattleSimulation.bind(this));
@@ -485,6 +486,41 @@ export class APIRoutes {
     } catch (error) {
       console.error('❌ Error getting user characters:', error);
       this.sendErrorResponse(res, 500, 'Failed to get user characters', error.message);
+    }
+  }
+
+  /**
+   * Handle delete character
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleDeleteCharacter(req, res) {
+    try {
+      const { discordUserId, characterId } = req.body;
+      
+      // Validate required fields
+      if (!discordUserId || !characterId) {
+        return this.sendErrorResponse(res, 400, 'Missing required fields: discordUserId and characterId are required');
+      }
+
+      console.log(`🗑️ Deleting character ${characterId} for user ${discordUserId}`);
+
+      // Delete character from Redis
+      const result = await this.redisManager.deleteCharacter(discordUserId.trim(), characterId.trim());
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: 'Character deleted successfully',
+          characterId: characterId
+        });
+      } else {
+        this.sendErrorResponse(res, 404, result.error || 'Character not found');
+      }
+
+    } catch (error) {
+      console.error('❌ Error deleting character:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
     }
   }
 

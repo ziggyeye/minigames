@@ -234,7 +234,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         }
 
         // Select character button
-        const selectButton = this.add.text(x + cardWidth/2 - 20, y, '▶️ Select', {
+        const selectButton = this.add.text(x + cardWidth/2 - 20, y - 20, '▶️ Select', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -244,6 +244,19 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         selectButton.setInteractive();
         selectButton.on('pointerdown', () => {
             this.selectCharacter(character);
+        });
+
+        // Delete character button
+        const deleteButton = this.add.text(x + cardWidth/2 - 20, y + 20, '🗑️ Delete', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#e74c3c',
+            padding: { x: 12, y: 6 }
+        }).setOrigin(1, 0.5);
+        deleteButton.setInteractive();
+        deleteButton.on('pointerdown', () => {
+            this.showDeleteConfirmation(character);
         });
 
         // Add hover effects to the card
@@ -312,6 +325,159 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         this.scene.start('BattleAIScene', {
             selectedCharacter: null,
             isNewCharacter: true
+        });
+    }
+
+    showDeleteConfirmation(character) {
+
+        const blocker = this.add.rectangle(
+            this.cameras.main.width/2, this.cameras.main.height/2, this.cameras.main.width, this.cameras.main.height,
+            0x000000,
+            0.5 // opacity (0 = invisible, 1 = solid black)
+          );
+          
+          // Make it interactive so it captures all clicks
+          blocker.setInteractive();
+
+        console.log('🗑️ Showing delete confirmation for:', character.characterName);
+        
+        // Create overlay
+        const overlay = this.add.graphics();
+        overlay.setDepth(1000);
+        overlay.fillStyle(0x000000, 0.8);
+        overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        // Create modal
+        const modal = this.add.graphics();
+        modal.setDepth(1001);
+        modal.fillStyle(0xe74c3c, 0.95);
+        modal.fillRoundedRect(centerX - 250, centerY - 120, 500, 240, 15);
+        modal.lineStyle(2, 0xffffff, 0.3);
+        modal.strokeRoundedRect(centerX - 250, centerY - 120, 500, 240, 15);
+
+        // Title
+        const title = this.add.text(centerX, centerY - 80, '🗑️ Delete Character', {
+            fontSize: '28px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        title.setDepth(1002);
+
+        // Warning message
+        const warningText = this.add.text(centerX, centerY - 40, `Are you sure you want to delete "${character.characterName}"?`, {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            wordWrap: { width: 450 }
+        }).setOrigin(0.5);
+        warningText.setDepth(1002);
+
+        const subText = this.add.text(centerX, centerY - 10, 'This action cannot be undone!', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            alpha: 0.8
+        }).setOrigin(0.5);
+        subText.setDepth(1002);
+
+        // Cancel button
+        const cancelButton = this.add.text(centerX - 80, centerY + 50, 'Cancel', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#95a5a6',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        cancelButton.setDepth(1002);
+        cancelButton.setInteractive();
+        cancelButton.on('pointerdown', () => {
+            overlay.destroy();
+            modal.destroy();
+            title.destroy();
+            warningText.destroy();
+            subText.destroy();
+            cancelButton.destroy();
+            deleteButton.destroy();
+            blocker.destroy();
+        });
+
+        // Delete button
+        const deleteButton = this.add.text(centerX + 80, centerY + 50, 'Delete', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#e74c3c',
+            padding: { x: 20, y: 8 }
+        }).setOrigin(0.5);
+        deleteButton.setDepth(1002);
+        deleteButton.setInteractive();
+        deleteButton.on('pointerdown', () => {
+            this.deleteCharacter(character);
+            // Clean up modal
+            overlay.destroy();
+            modal.destroy();
+            title.destroy();
+            warningText.destroy();
+            subText.destroy();
+            cancelButton.destroy();
+            deleteButton.destroy();
+            blocker.destroy();
+        });
+    }
+
+    async deleteCharacter(character) {
+        try {
+            console.log('🗑️ Deleting character:', character.characterName);
+            
+            const discordUserId = this.getDiscordUserId();
+            const response = await fetch(API_ENDPOINTS.deleteCharacter, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    discordUserId: discordUserId,
+                    characterId: character.id
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ Character deleted successfully');
+                this.showMessage(`Character "${character.characterName}" has been deleted.`);
+                
+                // Reload the character list
+                this.scene.restart();
+            } else {
+                console.error('❌ Failed to delete character:', result.error);
+                this.showErrorMessage(`Failed to delete character: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('❌ Error deleting character:', error);
+            this.showErrorMessage('Failed to delete character. Please try again.');
+        }
+    }
+
+    showMessage(message) {
+        // Create success message
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+
+        const messageText = this.add.text(centerX, centerY, message, {
+            fontSize: '20px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#27ae60',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Auto-hide after 3 seconds
+        this.time.delayedCall(3000, () => {
+            if (messageText) {
+                messageText.destroy();
+            }
         });
     }
 

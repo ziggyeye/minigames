@@ -358,11 +358,11 @@ export class RedisManager {
 
   /**
    * Delete a character
-   * @param {string} characterId - Character ID
    * @param {string} discordUserId - Discord user ID (for verification)
+   * @param {string} characterId - Character ID
    * @returns {Promise<Object>} Result object with success status
    */
-  async deleteCharacter(characterId, discordUserId) {
+  async deleteCharacter(discordUserId, characterId) {
     try {
       if (!this.isReady()) {
         console.log('⚠️  Redis not ready, skipping character deletion');
