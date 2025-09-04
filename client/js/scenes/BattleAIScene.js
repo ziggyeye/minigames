@@ -70,6 +70,13 @@ export default class BattleAIScene extends Phaser.Scene {
             };
             console.log('✅ Using selected character:', this.playerCharacter);
             
+            // Load character stats from selected character
+            if (this.selectedCharacter.stats) {
+                this.characterStats = { ...this.selectedCharacter.stats };
+                this.allocatedPoints = Object.values(this.characterStats).reduce((sum, val) => sum + val, 0);
+                console.log('📊 Loaded character stats from selected character:', this.characterStats);
+            }
+            
             // Load character level and battle stats
             this.loadCharacterLevel(this.playerCharacter.name);
             this.loadBattleStatsFromServer();
@@ -77,8 +84,15 @@ export default class BattleAIScene extends Phaser.Scene {
             // Show character creation with pre-filled data
             this.showCharacterCreation();
         } else {
+            // Reset stats to default for new character
+            this.characterStats = { STR: 1, DEX: 1, CON: 1, INT: 1 };
+            this.allocatedPoints = 4;
+            console.log('📊 Reset stats to default for new character:', this.characterStats);
+            
             // Load user characters for new character creation
-            this.loadUserCharacters();
+           // this.loadUserCharacters();
+           this.playerCharacter = null; 
+           this.showCharacterCreation();
         }
         
         // Always load battle statistics
@@ -251,70 +265,70 @@ export default class BattleAIScene extends Phaser.Scene {
         }
     }
 
-    async loadUserCharacters() {
-        try {
-            // Get Discord user ID
-            const discordUserId = this.getDiscordUserId();
+    // async loadUserCharacters() {
+    //     try {
+    //         // Get Discord user ID
+    //         const discordUserId = this.getDiscordUserId();
             
-            console.log('🎭 Loading user characters for:', discordUserId);
-            const getUserCharactersUrl = API_ENDPOINTS.getUserCharacters.replace(':discordUserId', discordUserId);
-            const response = await fetch(`${getUserCharactersUrl}?limit=10`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+    //         console.log('🎭 Loading user characters for:', discordUserId);
+    //         const getUserCharactersUrl = API_ENDPOINTS.getUserCharacters.replace(':discordUserId', discordUserId);
+    //         const response = await fetch(`${getUserCharactersUrl}?limit=10`, {
+    //             method: 'GET',
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
 
-            const result = await response.json();
+    //         const result = await response.json();
             
-            if (result.success && result.characters) {
-                this.userCharacters = result.characters;
-                console.log(`✅ Loaded ${this.userCharacters.length} characters`, this.userCharacters);
+    //         if (result.success && result.characters) {
+    //             this.userCharacters = result.characters;
+    //             console.log(`✅ Loaded ${this.userCharacters.length} characters`, this.userCharacters);
                 
-                // Handle cooldown status from server
-                if (result.cooldownStatus) {
-                    this.cooldownExpiry = result.cooldownStatus.cooldownExpiry ? new Date(result.cooldownStatus.cooldownExpiry) : null;
-                    console.log('⏰ Cooldown status:', result.cooldownStatus);
-                }
+    //             // Handle cooldown status from server
+    //             if (result.cooldownStatus) {
+    //                 this.cooldownExpiry = result.cooldownStatus.cooldownExpiry ? new Date(result.cooldownStatus.cooldownExpiry) : null;
+    //                 console.log('⏰ Cooldown status:', result.cooldownStatus);
+    //             }
                 
-                // Handle battle gems from server
-                if (result.battleGems !== undefined) {
-                    this.battleGems = result.battleGems;
-                    console.log('💎 Battle gems loaded:', this.battleGems);
-                }
+    //             // Handle battle gems from server
+    //             if (result.battleGems !== undefined) {
+    //                 this.battleGems = result.battleGems;
+    //                 console.log('💎 Battle gems loaded:', this.battleGems);
+    //             }
                 
-                // Auto-fill with first character if available
-                if (this.userCharacters.length > 0) {
-                    const firstCharacter = this.userCharacters[0];
-                    this.playerCharacter = {
-                        name: firstCharacter.characterName,
-                        description: firstCharacter.description
-                    };
+    //             // Auto-fill with first character if available
+    //             if (this.userCharacters.length > 0) {
+    //                 const firstCharacter = this.userCharacters[0];
+    //                 this.playerCharacter = {
+    //                     name: firstCharacter.characterName,
+    //                     description: firstCharacter.description
+    //                 };
                     
-                    // Load character stats if available
-                    if (firstCharacter.stats) {
-                        this.characterStats = { ...firstCharacter.stats };
-                        this.allocatedPoints = Object.values(this.characterStats).reduce((sum, val) => sum + val, 0);
-                        console.log('📊 Loaded character stats:', this.characterStats);
-                    }
+    //                 // Load character stats if available
+    //                 if (firstCharacter.stats) {
+    //                     this.characterStats = { ...firstCharacter.stats };
+    //                     this.allocatedPoints = Object.values(this.characterStats).reduce((sum, val) => sum + val, 0);
+    //                     console.log('📊 Loaded character stats:', this.characterStats);
+    //                 }
                     
-                    // Load character level
-                    await this.loadCharacterLevel(firstCharacter.characterName);
+    //                 // Load character level
+    //                 await this.loadCharacterLevel(firstCharacter.characterName);
                     
-                    console.log('🎭 Auto-filled with character:', firstCharacter.characterName);
-                }
-            } else {
-                console.log('⚠️ No characters found or failed to load:', result.error || 'Unknown error');
-                this.userCharacters = [];
-            }
-        } catch (error) {
-            console.error('❌ Error loading user characters:', error);
-            this.userCharacters = [];
-        }
+    //                 console.log('🎭 Auto-filled with character:', firstCharacter.characterName);
+    //             }
+    //         } else {
+    //             console.log('⚠️ No characters found or failed to load:', result.error || 'Unknown error');
+    //             this.userCharacters = [];
+    //         }
+    //     } catch (error) {
+    //         console.error('❌ Error loading user characters:', error);
+    //         this.userCharacters = [];
+    //     }
         
-        // Initialize character creation form (with auto-filled data if available)
-        this.showCharacterCreation();
-    }
+    //     // Initialize character creation form (with auto-filled data if available)
+    //     this.showCharacterCreation();
+    // }
 
     shutdown() {
         // Clean up timer when scene is destroyed

@@ -139,7 +139,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
                 this.hideLoadingMessage();
                 this.displayCharacters();
 
-                if (this.userCharacters.length < 5-1) {
+                if (this.userCharacters.length < 5) {
                     // Create New Character button
                     this.createNewCharacterButton();
                 }
