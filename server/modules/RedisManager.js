@@ -357,6 +357,34 @@ export class RedisManager {
   }
 
   /**
+   * Check if a character with the given name already exists for a user
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name to check
+   * @returns {Promise<Object|null>} Existing character object or null
+   */
+  async getCharacterByName(discordUserId, characterName) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning null for character check');
+        return null;
+      }
+
+      // Get all characters for the user
+      const characters = await this.getUserCharacters(discordUserId, 100);
+      
+      // Check if any character has the same name (case-insensitive)
+      const existingCharacter = characters.find(char => 
+        char.characterName.toLowerCase() === characterName.toLowerCase()
+      );
+      
+      return existingCharacter || null;
+    } catch (error) {
+      console.error('❌ Error checking character by name:', error);
+      return null;
+    }
+  }
+
+  /**
    * Delete a character
    * @param {string} discordUserId - Discord user ID (for verification)
    * @param {string} characterId - Character ID
@@ -397,7 +425,7 @@ export class RedisManager {
   }
 
   /**
-   * Update battle statistics for a user
+   * Update battle statistics for a character
    * @param {string} discordUserId - Discord user ID
    * @param battleResult
    * @param {Object} playerCharacter - Player character object
@@ -410,18 +438,19 @@ export class RedisManager {
         return this.getDefaultBattleStats();
       }
 
-      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}`;
+      // Use character-specific key instead of user-specific key
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}:${playerCharacter.name}`;
       
       // Get current stats or initialize
-      const currentStats = await this.getBattleStats(discordUserId);
+      const currentStats = await this.getCharacterBattleStats(discordUserId, playerCharacter.name);
       
-            // Update stats based on battle result
+      // Update stats based on battle result
       const playerWon = battleResult.winner.name === playerCharacter.name;
       const updatedStats = {
         totalBattles: currentStats.totalBattles + 1,
         wins: currentStats.wins + (playerWon ? 1 : 0),
         losses: currentStats.losses + (playerWon ? 0 : 1),
-    //     ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
+        ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
         lastBattleDate: new Date().toISOString()
       };
       
@@ -436,7 +465,7 @@ export class RedisManager {
       // Save updated stats
       await this.client.hSet(statsKey, updatedStats);
       
-      console.log(`📊 Battle stats updated for ${discordUserId}: ${playerCharacter.name} - ${updatedStats.wins}W/${updatedStats.losses}L (${updatedStats.winRate}%)`);
+      console.log(`📊 Battle stats updated for character ${playerCharacter.name} (${discordUserId}): ${updatedStats.wins}W/${updatedStats.losses}L (${updatedStats.winRate}%)`);
       
       return updatedStats;
 
@@ -701,18 +730,19 @@ export class RedisManager {
   }
 
   /**
-   * Get battle statistics for a user
+   * Get battle statistics for a specific character
    * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
    * @returns {Promise<Object>} Battle statistics
    */
-  async getBattleStats(discordUserId) {
+  async getCharacterBattleStats(discordUserId, characterName) {
     try {
       if (!this.isReady()) {
         console.warn('⚠️  Redis not ready, returning default battle stats');
         return this.getDefaultBattleStats();
       }
 
-      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}`;
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}:${characterName}`;
       const stats = await this.client.hGetAll(statsKey);
       
       if (!stats || Object.keys(stats).length === 0) {
@@ -735,7 +765,50 @@ export class RedisManager {
       return battleStats;
 
     } catch (error) {
-      console.error('❌ Error getting battle stats:', error);
+      console.error('❌ Error getting character battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Get battle statistics for a user (legacy method - now returns combined stats for all characters)
+   * @param {string} discordUserId - Discord user ID
+   * @returns {Promise<Object>} Combined battle statistics for all user's characters
+   */
+  async getBattleStats(discordUserId) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, returning default battle stats');
+        return this.getDefaultBattleStats();
+      }
+
+      // Get all characters for the user
+      const characters = await this.getUserCharacters(discordUserId, 100);
+      
+      if (characters.length === 0) {
+        return this.getDefaultBattleStats();
+      }
+
+      // Combine stats from all characters
+      let combinedStats = this.getDefaultBattleStats();
+      
+      for (const character of characters) {
+        const characterStats = await this.getCharacterBattleStats(discordUserId, character.characterName);
+        combinedStats.totalBattles += characterStats.totalBattles;
+        combinedStats.wins += characterStats.wins;
+        combinedStats.losses += characterStats.losses;
+        combinedStats.ties += characterStats.ties;
+      }
+      
+      // Calculate combined win rate
+      combinedStats.winRate = combinedStats.totalBattles > 0 
+        ? Math.round((combinedStats.wins / combinedStats.totalBattles) * 100) 
+        : 0;
+      
+      return combinedStats;
+
+    } catch (error) {
+      console.error('❌ Error getting combined battle stats:', error);
       return this.getDefaultBattleStats();
     }
   }

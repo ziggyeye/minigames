@@ -145,7 +145,7 @@ export default class MenuScene extends Phaser.Scene {
         const centerY = this.cameras.main.centerY - 550;
 
         // Main title
-        this.add.text(centerX, centerY, '🎮 Discord Minigames', {
+        this.add.text(centerX, centerY, '🎮 AI Battle Sim', {
             fontSize: '48px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -153,7 +153,7 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(centerX, centerY + 60, 'Choose a game to play with your friends!', {
+        this.add.text(centerX, centerY + 60, 'Create characters and simulate battles!', {
             fontSize: '20px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',

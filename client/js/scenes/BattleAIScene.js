@@ -47,7 +47,7 @@ export default class BattleAIScene extends Phaser.Scene {
         this.load.image('background', '/assets/background.svg');
     }
 
-    create(data) {
+    async create(data) {
         // Store data passed from CharacterSelectionScene
         this.selectedCharacter = data?.selectedCharacter || null;
         this.isNewCharacter = data?.isNewCharacter || false;
@@ -77,12 +77,15 @@ export default class BattleAIScene extends Phaser.Scene {
                 console.log('📊 Loaded character stats from selected character:', this.characterStats);
             }
             
-            // Load character level and battle stats
+            // Load character level, battle stats, and cooldown status
             this.loadCharacterLevel(this.playerCharacter.name);
             this.loadBattleStatsFromServer();
             
-            // Show character creation with pre-filled data
-            this.showCharacterCreation();
+            // Load cooldown and gems, then show character data
+            await this.loadCooldownAndGemsFromServer();
+            
+            // Show character data (immutable)
+            this.showCharacterData();
         } else {
             // Reset stats to default for new character
             this.characterStats = { STR: 1, DEX: 1, CON: 1, INT: 1 };
@@ -92,7 +95,7 @@ export default class BattleAIScene extends Phaser.Scene {
             // Load user characters for new character creation
            // this.loadUserCharacters();
            this.playerCharacter = null; 
-           this.showCharacterCreation();
+           this.showCharacterData();
         }
         
         // Always load battle statistics
@@ -106,10 +109,20 @@ export default class BattleAIScene extends Phaser.Scene {
     async loadBattleStatsFromServer() {
         try {
             const discordUserId = this.getDiscordUserId();
-            console.log('📊 Loading battle statistics from server for:', discordUserId);
+            const characterName = this.playerCharacter?.name;
+            
+            if (!characterName) {
+                console.log('ℹ️  No character selected, using default battle stats');
+                return;
+            }
+            
+            console.log('📊 Loading battle statistics from server for character:', characterName, 'user:', discordUserId);
 
-            const getBattleStatsUrl = API_ENDPOINTS.battleStats.replace(':discordUserId', discordUserId);
-            const response = await fetch(getBattleStatsUrl, {
+            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterBattleStats
+                .replace(':discordUserId', discordUserId)
+                .replace(':characterName', encodeURIComponent(characterName));
+                
+            const response = await fetch(getCharacterBattleStatsUrl, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -117,12 +130,12 @@ export default class BattleAIScene extends Phaser.Scene {
             
             if (result.success && result.battleStats) {
                 this.battleStats = result.battleStats;
-                console.log('✅ Battle statistics loaded:', this.battleStats);
+                console.log('✅ Character battle statistics loaded:', this.battleStats);
             } else {
-                console.log('ℹ️  No battle statistics found, using defaults');
+                console.log('ℹ️  No battle statistics found for character, using defaults');
             }
         } catch (error) {
-            console.error('❌ Error loading battle statistics:', error);
+            console.error('❌ Error loading character battle statistics:', error);
             // Keep default stats on error
         }
     }
@@ -139,6 +152,51 @@ export default class BattleAIScene extends Phaser.Scene {
         } catch (error) {
             console.error('❌ Error loading character level:', error);
             this.characterLevel = 0;
+        }
+    }
+
+    async loadCooldownAndGemsFromServer() {
+        try {
+            const discordUserId = this.getDiscordUserId();
+            console.log('⏰ Loading cooldown and gems status for:', discordUserId);
+
+            // Get user characters to get cooldown and gems info
+            const getUserCharactersUrl = API_ENDPOINTS.getUserCharacters.replace(':discordUserId', discordUserId);
+            const response = await fetch(`${getUserCharactersUrl}?limit=1`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Handle cooldown status from server
+                if (result.cooldownStatus) {
+                    this.cooldownExpiry = result.cooldownStatus.cooldownExpiry ? new Date(result.cooldownStatus.cooldownExpiry) : null;
+                    console.log('⏰ Cooldown status loaded:', result.cooldownStatus);
+                    console.log('⏰ Cooldown expiry set to:', this.cooldownExpiry);
+                    
+                    // Check if we're currently on cooldown
+                    const cooldownStatus = this.checkCooldown();
+                    console.log('⏰ Current cooldown status:', cooldownStatus);
+                } else {
+                    console.log('⏰ No cooldown status in server response');
+                    this.cooldownExpiry = null;
+                }
+                
+                // Handle battle gems from server
+                if (result.battleGems !== undefined) {
+                    this.battleGems = result.battleGems;
+                    console.log('💎 Battle gems loaded:', this.battleGems);
+                } else {
+                    console.log('💎 No battle gems in server response');
+                }
+            } else {
+                console.log('⚠️ Failed to load cooldown and gems status:', result.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('❌ Error loading cooldown and gems status:', error);
+            // Keep default values on error
         }
     }
 
@@ -186,8 +244,8 @@ export default class BattleAIScene extends Phaser.Scene {
                 console.log('✅ Battle gems added:', result.message);
                 this.showMessage(`✅ ${result.message}`);
                 
-                // Refresh the character creation UI to show updated gems
-                this.showCharacterCreation();
+                // Refresh the character data UI to show updated gems
+                this.showCharacterData();
             } else {
                 console.log('⚠️ Battle gems add failed:', result.message);
                 this.showError(`⚠️ ${result.message}`);
@@ -220,14 +278,18 @@ export default class BattleAIScene extends Phaser.Scene {
     updateCooldownDisplay() {
         const cooldownStatus = this.checkCooldown();
         
-        // Update main battle button
+        // Update main battle button (in character data screen)
         if (this.battleButton) {
             if (cooldownStatus.onCooldown) {
                 const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
                 this.battleButton.setText(`⏰ Cooldown: ${timeRemaining}`);
                 this.battleButton.setBackgroundColor('#95a5a6');
                 this.battleButton.disableInteractive();
-                this.battleWithGemButton.setInteractive();
+                
+                // Enable battle with gem button if it exists
+                if (this.battleWithGemButton) {
+                    this.battleWithGemButton.setInteractive();
+                }
             } else {
                 // Cooldown expired
                 this.battleButton.setText('⚔️ Free Battle!');
@@ -237,11 +299,14 @@ export default class BattleAIScene extends Phaser.Scene {
                     this.startBattle();
                 });
 
-                this.battleWithGemButton.disableInteractive();
+                // Disable battle with gem button if it exists
+                if (this.battleWithGemButton) {
+                    this.battleWithGemButton.disableInteractive();
+                }
             }
         }
         
-        // Update battle again button
+        // Update battle again button (in battle result screen)
         if (this.battleAgainButton) {
             if (cooldownStatus.onCooldown) {
                 const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
@@ -259,8 +324,8 @@ export default class BattleAIScene extends Phaser.Scene {
             }
         }
         
-        // Stop timer if cooldown expired for both buttons
-        if (!cooldownStatus.onCooldown && this.battleButton && this.battleAgainButton) {
+        // Stop timer if cooldown expired
+        if (!cooldownStatus.onCooldown) {
             this.stopCooldownTimer();
         }
     }
@@ -404,7 +469,7 @@ export default class BattleAIScene extends Phaser.Scene {
         // });
     }
 
-    showCharacterCreation() {
+    showCharacterData() {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
@@ -418,99 +483,94 @@ export default class BattleAIScene extends Phaser.Scene {
         formBg.lineStyle(2, 0xffffff, 0.3);
         formBg.strokeRoundedRect(centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight, 15);
 
-        let top = centerY - boxHeight/2 +40;
+        let top = centerY - boxHeight/2 + 40;
+        
         // Title
-        this.add.text(centerX, top, 'Create Your Character', {
+        this.add.text(centerX, top, 'Your Character', {
             fontSize: '32px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        top += 40;
+        top += 50;
 
-        // Server handles AI integration - no API key needed on client
-
-        // Name input label
+        // Character Name (read-only)
         this.add.text(centerX - 250, top, 'Character Name:', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff'
         });
 
-        // Name input field (simulated with text) - auto-filled if character exists
         const nameDisplayText = this.playerCharacter && this.playerCharacter.name 
             ? this.playerCharacter.name 
-            : 'Enter name here...';
-        const nameColor = this.playerCharacter && this.playerCharacter.name 
-            ? '#ffffff' 
-            : '#cccccc';
+            : 'No character selected';
             
-        top += 18;
-        top += 5;
+        top += 25;
 
-        this.nameText = this.add.text(centerX - 250, top, nameDisplayText, {
+        this.add.text(centerX - 250, top, nameDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: nameColor,
+            color: this.playerCharacter && this.playerCharacter.name ? '#ffffff' : '#cccccc',
             backgroundColor: '#2c3e50',
             padding: { x: 10, y: 8 }
         });
-        this.nameText.setInteractive();
-        this.nameText.on('pointerdown', () => {
-            this.showNameInput();
-        });
 
-        top += 16;
-        top += 30;
+        top += 40;
 
-        // Description input label
+        // Character Description (read-only)
         this.add.text(centerX - 250, top, 'Character Description:', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff'
         });
 
-        // Description input field (simulated with text) - auto-filled if character exists
         const descDisplayText = this.playerCharacter && this.playerCharacter.description 
             ? this.playerCharacter.description 
-            : 'Enter description here...';
-        const descColor = this.playerCharacter && this.playerCharacter.description 
-            ? '#ffffff' 
-            : '#cccccc';
+            : 'No description available';
 
-        top += 18;
-        top += 5;
+        top += 25;
             
-        this.descText = this.add.text(centerX - 250, top, descDisplayText, {
+        this.add.text(centerX - 250, top, descDisplayText, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: descColor,
+            color: this.playerCharacter && this.playerCharacter.description ? '#ffffff' : '#cccccc',
             backgroundColor: '#2c3e50',
             padding: { x: 10, y: 8 },
             wordWrap: { width: 500 }
         });
-        this.descText.setInteractive();
-        this.descText.on('pointerdown', () => {
-            this.showDescriptionInput();
-        });
 
-        top += 45;
-        top += 5;
+        top += 60;
 
-        // Character Stats section
-        this.add.text(centerX - 250, top, 'Character Stats (10 points to allocate):', {
+        // Character Stats (read-only)
+        this.add.text(centerX - 250, top, 'Character Stats:', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         });
 
-        top += 25;
-        top += 15;
+        top += 30;
 
-        // Create stats allocation UI
-        this.createStatsAllocationUI(centerX, top);
+        // Display stats as read-only
+        this.createReadOnlyStatsDisplay(centerX, top);
+
+        top += 120;
+
+        // Battle Statistics section
+        this.add.text(centerX - 250, top, 'Battle Statistics:', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+
+        top += 30;
+
+        // Battle stats display
+        this.createBattleStatsDisplay(centerX, top);
+
+        top += 100;
 
         // Check cooldown status
         const cooldownStatus = this.checkCooldown();
@@ -521,7 +581,7 @@ export default class BattleAIScene extends Phaser.Scene {
         let battleButtonEnabled = true;
 
         // Battle with Gem button (next to main battle button)
-        this.battleWithGemButton = this.add.text(centerX, top + 220, '💎 Battle with Gem', {
+        this.battleWithGemButton = this.add.text(centerX, top + 20, '💎 Battle with Gem', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -543,7 +603,7 @@ export default class BattleAIScene extends Phaser.Scene {
             this.battleWithGemButton.disableInteractive();
         }
         
-        const battleButton = this.add.text(centerX, top + 180, battleButtonText, {
+        const battleButton = this.add.text(centerX, top - 20, battleButtonText, {
             fontSize: '24px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -561,9 +621,8 @@ export default class BattleAIScene extends Phaser.Scene {
         // Store reference to battle button for cooldown updates
         this.battleButton = battleButton;
         
-        
         if (this.battleGems >= 1) {
-            this.battleWithGemButton .on('pointerdown', () => {
+            this.battleWithGemButton.on('pointerdown', () => {
                 this.startBattleWithGem();
             });
         }
@@ -573,16 +632,8 @@ export default class BattleAIScene extends Phaser.Scene {
             this.startCooldownTimer();
         }
 
-        // Instructions
-        this.add.text(centerX, top + 250, 'Click on the input fields to enter your character details', {
-            fontSize: '14px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            alpha: 0.7
-        }).setOrigin(0.5);
-
         // Battle gems display and add button
-        const gemsY = top + 300;
+        const gemsY = top + 80;
         
         // Battle gems label
         this.add.text(centerX - 250, gemsY, '💎 Battle Gems:', {
@@ -593,7 +644,7 @@ export default class BattleAIScene extends Phaser.Scene {
         });
 
         // Battle gems count
-        this.add.text(centerX - 110, gemsY-8, `${this.battleGems}/5`, {
+        this.add.text(centerX - 110, gemsY - 8, `${this.battleGems}/5`, {
             fontSize: '16px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -617,22 +668,95 @@ export default class BattleAIScene extends Phaser.Scene {
             });
         }
 
-        // Character loading status
-        if (this.userCharacters.length > 0) {
-            this.add.text(centerX, gemsY + 40, `✅ Auto-filled with your last character (${this.userCharacters.length} saved)`, {
+        // Character status
+        if (this.playerCharacter && this.playerCharacter.name) {
+            this.add.text(centerX, gemsY + 40, `✅ Ready to battle with ${this.playerCharacter.name}`, {
                 fontSize: '12px',
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                 color: '#2ecc71',
                 alpha: 0.8
             }).setOrigin(0.5);
         } else {
-            this.add.text(centerX, gemsY + 40, '📝 No saved characters found - create your first character!', {
+            this.add.text(centerX, gemsY + 40, '⚠️ No character selected - go back to select a character', {
                 fontSize: '12px',
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                 color: '#f39c12',
                 alpha: 0.8
             }).setOrigin(0.5);
         }
+    }
+
+    createReadOnlyStatsDisplay(centerX, startY) {
+        const statNames = ['STR', 'DEX', 'CON', 'INT'];
+        const statLabels = {
+            'STR': 'Strength',
+            'DEX': 'Dexterity', 
+            'CON': 'Constitution',
+            'INT': 'Intelligence'
+        };
+
+        statNames.forEach((stat, index) => {
+            const yPos = startY + (index * 25);
+            
+            // Stat label
+            this.add.text(centerX - 250, yPos, `${stat} (${statLabels[stat]}):`, {
+                fontSize: '14px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff'
+            });
+            
+            // Stat value display (read-only)
+            this.add.text(centerX, yPos, this.characterStats[stat].toString(), {
+                fontSize: '16px',
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: '#ffffff',
+                backgroundColor: '#34495e',
+                padding: { x: 12, y: 4 }
+            }).setOrigin(0.5);
+        });
+    }
+
+    createBattleStatsDisplay(centerX, startY) {
+        // Battle stats background
+        const statsBg = this.add.graphics();
+        statsBg.fillStyle(0xffffff, 0.1);
+        statsBg.fillRoundedRect(centerX - 250, startY, 500, 60, 10);
+        statsBg.lineStyle(1, 0xffffff, 0.3);
+        statsBg.strokeRoundedRect(centerX - 250, startY, 500, 60, 10);
+
+        // Stats row 1: Total Battles and Win Rate
+        this.add.text(centerX - 200, startY + 15, `Total: ${this.battleStats.totalBattles}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff'
+        });
+
+        this.add.text(centerX + 50, startY + 15, `Win Rate: ${this.battleStats.winRate}%`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#2ecc71',
+            fontStyle: 'bold'
+        });
+
+        // Stats row 2: Wins, Losses, Level
+        this.add.text(centerX - 200, startY + 35, `W: ${this.battleStats.wins}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#2ecc71'
+        });
+
+        this.add.text(centerX - 50, startY + 35, `L: ${this.battleStats.losses}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#e74c3c'
+        });
+
+        this.add.text(centerX + 50, startY + 35, `Level: ${this.characterLevel}`, {
+            fontSize: '14px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#f39c12',
+            fontStyle: 'bold'
+        });
     }
 
     createStatsAllocationUI(centerX, startY) {
@@ -1121,16 +1245,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
     async startBattle() {
         if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
-            this.showError('Please enter both name and description for your character!');
-            return;
-        }
-
-        console.log("name ", this.playerCharacter.name);
-
-        console.log("points: ", this.totalPointsToAllocate - this.allocatedPoints);
-
-        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
-            this.showError('Spend all points before battling!');
+            this.showError('No character selected! Please go back and select a character.');
             return;
         }
 
@@ -1144,9 +1259,6 @@ export default class BattleAIScene extends Phaser.Scene {
 
         this.isLoading = true;
         this.showLoadingScreen();
-        
-        // Save character to server
-        await this.saveCharacterToServer();
         
         // Simulate battle on server
         await this.simulateBattle();
@@ -1709,7 +1821,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
     async startBattleWithGem() {
         if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
-            this.showError('Please create a character first.');
+            this.showError('No character selected! Please go back and select a character.');
             return;
         }
 
@@ -1718,17 +1830,9 @@ export default class BattleAIScene extends Phaser.Scene {
             return;
         }
 
-        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
-            this.showError('Spend all points before battling!');
-            return;
-        }
-
         // Start battle using a gem to bypass cooldown
         this.isLoading = true;
         this.showLoadingScreen();
-        
-        // Save character to server
-        await this.saveCharacterToServer();
         
         // Simulate battle on server with gem usage
         await this.simulateBattleWithGem();
@@ -1737,11 +1841,6 @@ export default class BattleAIScene extends Phaser.Scene {
     async startNewBattleWithGem() {
         if (this.battleGems < 1) {
             this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
-            return;
-        }
-
-        if (this.totalPointsToAllocate - this.allocatedPoints > 0) {
-            this.showError('Spend all points before battling!');
             return;
         }
 

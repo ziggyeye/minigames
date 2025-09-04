@@ -3,6 +3,7 @@ import MenuScene from './scenes/MenuScene.js';
 import CircusScene from './scenes/CircusScene.js';
 import BattleAIScene from './scenes/BattleAIScene.js';
 import CharacterSelectionScene from './scenes/CharacterSelectionScene.js';
+import CharacterCreationScene from './scenes/CharacterCreationScene.js';
 import { DiscordManager } from './DiscordManager.js';
 
 // Import RexUI plugins
@@ -63,7 +64,7 @@ const config = {
                 }
             ]
         },
-    scene: [MenuScene, CircusScene, BattleAIScene, CharacterSelectionScene],
+    scene: [MenuScene, CircusScene, BattleAIScene, CharacterSelectionScene, CharacterCreationScene],
     backgroundColor: '#34495e',
     pixelArt: false,
     roundPixels: false

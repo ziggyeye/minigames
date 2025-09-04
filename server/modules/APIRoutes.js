@@ -49,6 +49,7 @@ export class APIRoutes {
     
     // Battle statistics endpoints
     app.get('/api/battle/stats/:discordUserId', this.handleGetBattleStats.bind(this));
+    app.get('/api/battle/stats/:discordUserId/:characterName', this.handleGetCharacterBattleStats.bind(this));
     
     // Battle gems endpoints
     app.post('/api/battleGems/add', this.handleAddBattleGems.bind(this));
@@ -387,6 +388,13 @@ export class APIRoutes {
 
       console.log(`🎭 Saving character: ${characterName} for user ${discordUserId}`, stats);
 
+      // Check if character with this name already exists for this user
+      const existingCharacter = await this.redisManager.getCharacterByName(discordUserId, characterName.trim());
+      if (existingCharacter) {
+        console.log(`⚠️ Character "${characterName}" already exists for user ${discordUserId}`);
+        return this.sendErrorResponse(res, 409, `Character "${characterName}" already exists. Please choose a different name.`);
+      }
+
       // Save character to Redis
       const character = {
         characterName: characterName.trim(),
@@ -602,7 +610,7 @@ export class APIRoutes {
       // Simulate battle
       const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
 
-      // Update battle statistics
+      // Update battle statistics for this specific character
       const battleStats = await this.redisManager.updateBattleStats(discordUserId, battleResult, playerCharacter);
 
       // Get updated character level
@@ -1068,7 +1076,46 @@ Format your result as a single paragraph.`;
   }
 
   /**
-   * Handle get battle statistics
+   * Handle get battle statistics for a specific character
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetCharacterBattleStats(req, res) {
+    try {
+      const { discordUserId, characterName } = req.params;
+      
+      // Validate parameters
+      if (!discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required parameter: discordUserId');
+      }
+      
+      if (!characterName) {
+        return this.sendErrorResponse(res, 400, 'Missing required parameter: characterName');
+      }
+
+      console.log(`📊 Getting battle statistics for character: ${characterName} (user: ${discordUserId})`);
+
+      // Get character-specific battle statistics from Redis
+      const battleStats = await this.redisManager.getCharacterBattleStats(discordUserId, characterName);
+
+      const response = {
+        success: true,
+        discordUserId: discordUserId,
+        characterName: characterName,
+        battleStats: battleStats,
+        timestamp: new Date().toISOString()
+      };
+      
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Error getting character battle statistics:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle get battle statistics (combined for all user's characters)
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
@@ -1081,9 +1128,9 @@ Format your result as a single paragraph.`;
         return this.sendErrorResponse(res, 400, 'Missing required parameter: discordUserId');
       }
 
-      console.log(`📊 Getting battle statistics for user: ${discordUserId}`);
+      console.log(`📊 Getting combined battle statistics for user: ${discordUserId}`);
 
-      // Get battle statistics from Redis
+      // Get combined battle statistics from Redis
       const battleStats = await this.redisManager.getBattleStats(discordUserId);
 
       const response = {

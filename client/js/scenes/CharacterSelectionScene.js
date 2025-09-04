@@ -168,7 +168,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
 
         const centerX = this.cameras.main.centerX;
         const startY = 250;
-        const cardHeight = 120;
+        const cardHeight = 140; // Updated to match new card height
         const cardSpacing = 20;
 
         // Title for existing characters
@@ -193,7 +193,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
 
     createCharacterCard(character, x, y) {
         const cardWidth = 500;
-        const cardHeight = 120;
+        const cardHeight = 140; // Increased height to accommodate battle stats
 
         // Card background
         const card = this.add.graphics();
@@ -203,20 +203,20 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         card.strokeRoundedRect(x - cardWidth/2, y - cardHeight/2, cardWidth, cardHeight, 15);
 
         // Character name
-        this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 20, character.characterName, {
-            fontSize: '24px',
+        this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 15, character.characterName, {
+            fontSize: '22px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             fontStyle: 'bold'
         });
 
         // Character description
-        const descText = this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 50, character.description, {
-            fontSize: '16px',
+        const descText = this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 40, character.description, {
+            fontSize: '14px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             alpha: 0.9,
-            wordWrap: { width: cardWidth - 100 }
+            wordWrap: { width: cardWidth - 200 }
         });
 
         // Character stats
@@ -225,13 +225,24 @@ export default class CharacterSelectionScene extends Phaser.Scene {
                 .map(([stat, value]) => `${stat}: ${value}`)
                 .join(' | ');
             
-            this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 80, statsText, {
-                fontSize: '14px',
+            this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 60, statsText, {
+                fontSize: '12px',
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                 color: '#667eea',
                 alpha: 0.8
             });
         }
+
+        // Battle stats (will be loaded asynchronously)
+        const battleStatsText = this.add.text(x - cardWidth/2 + 20, y - cardHeight/2 + 80, 'Loading battle stats...', {
+            fontSize: '12px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#f39c12',
+            alpha: 0.8
+        });
+
+        // Load character-specific battle stats
+        this.loadCharacterBattleStats(character, battleStatsText);
 
         // Select character button
         const selectButton = this.add.text(x + cardWidth/2 - 20, y - 20, '▶️ Select', {
@@ -311,7 +322,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     selectCharacter(character) {
         console.log('🎭 Character selected:', character);
         
-        // Start Battle AI scene with the selected character
+        // Start Character Creation scene with the selected character
         this.scene.start('BattleAIScene', {
             selectedCharacter: character,
             isNewCharacter: false
@@ -321,8 +332,8 @@ export default class CharacterSelectionScene extends Phaser.Scene {
     createNewCharacter() {
         console.log('✨ Creating new character');
         
-        // Start Battle AI scene for new character creation
-        this.scene.start('BattleAIScene', {
+        // Start Character Creation scene for new character creation
+        this.scene.start('CharacterCreationScene', {
             selectedCharacter: null,
             isNewCharacter: true
         });
@@ -528,6 +539,40 @@ export default class CharacterSelectionScene extends Phaser.Scene {
             color: '#e74c3c',
             fontStyle: 'bold'
         }).setOrigin(0.5);
+    }
+
+    async loadCharacterBattleStats(character, battleStatsText) {
+        try {
+            const discordUserId = this.getDiscordUserId();
+            if (!discordUserId) {
+                battleStatsText.setText('No Discord user ID');
+                return;
+            }
+
+            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterBattleStats
+                .replace(':discordUserId', discordUserId)
+                .replace(':characterName', encodeURIComponent(character.characterName));
+                
+            const response = await fetch(getCharacterBattleStatsUrl, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await response.json();
+            
+            if (result.success && result.battleStats) {
+                const stats = result.battleStats;
+                const statsText = `Battles: ${stats.totalBattles} | W: ${stats.wins} | L: ${stats.losses} | Win Rate: ${stats.winRate}%`;
+                battleStatsText.setText(statsText);
+                battleStatsText.setColor('#2ecc71');
+            } else {
+                battleStatsText.setText('No battles yet');
+                battleStatsText.setColor('#95a5a6');
+            }
+        } catch (error) {
+            console.error('❌ Error loading character battle stats:', error);
+            battleStatsText.setText('Error loading stats');
+            battleStatsText.setColor('#e74c3c');
+        }
     }
 
     getDiscordUserId() {

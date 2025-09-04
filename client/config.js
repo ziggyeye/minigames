@@ -9,6 +9,7 @@ const config = {
       deleteCharacterEndpoint: '/api/characters/delete',
       battleSimulationEndpoint: '/api/battle/simulate',
       battleStatsEndpoint: '/api/battle/stats/:discordUserId',
+      characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
       getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
     },
@@ -21,6 +22,7 @@ const config = {
       deleteCharacterEndpoint: '/api/characters/delete',
       battleSimulationEndpoint: '/api/battle/simulate',
       battleStatsEndpoint: '/api/battle/stats/:discordUserId',
+      characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
       getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
     }
@@ -45,6 +47,7 @@ const config = {
     deleteCharacter: getApiUrl(currentConfig.deleteCharacterEndpoint),
     battleSimulation: getApiUrl(currentConfig.battleSimulationEndpoint),
     battleStats: getApiUrl(currentConfig.battleStatsEndpoint),
+    characterBattleStats: getApiUrl(currentConfig.characterBattleStatsEndpoint),
     addBattleGems: getApiUrl(currentConfig.addBattleGemsEndpoint),
     getBattleGems: getApiUrl(currentConfig.getBattleGemsEndpoint)
   };
