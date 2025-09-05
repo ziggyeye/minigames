@@ -173,8 +173,12 @@ export default class MenuScene extends Phaser.Scene {
         this.createGameCard(centerX, 300, '⚔️', 'Battle AI', 
             'Create a character and battle against AI opponents!', 'battle-ai');
 
+        // High Scores Card
+        this.createGameCard(centerX, 500, '🏆', 'High Scores', 
+            'View the top characters by win rate!', 'high-scores');
+
         // Coming Soon Card
-        this.createGameCard(centerX, 500, '🚧', 'More Games Coming!', 
+        this.createGameCard(centerX, 700, '🚧', 'More Games Coming!', 
             'We\'re working on more exciting minigames!', 'coming-soon');
 
         // Add privacy policy and terms of service links
@@ -392,6 +396,9 @@ export default class MenuScene extends Phaser.Scene {
                 break;
             case 'battle-ai':
                 this.scene.start('CharacterSelectionScene');
+                break;
+            case 'high-scores':
+                this.scene.start('HighScoreScene');
                 break;
             case 'coming-soon':
                 // Show coming soon message

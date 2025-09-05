@@ -4,6 +4,7 @@ import CircusScene from './scenes/CircusScene.js';
 import BattleAIScene from './scenes/BattleAIScene.js';
 import CharacterSelectionScene from './scenes/CharacterSelectionScene.js';
 import CharacterCreationScene from './scenes/CharacterCreationScene.js';
+import HighScoreScene from './scenes/HighScoreScene.js';
 import { DiscordManager } from './DiscordManager.js';
 
 // Import RexUI plugins
@@ -64,7 +65,7 @@ const config = {
                 }
             ]
         },
-    scene: [MenuScene, CircusScene, BattleAIScene, CharacterSelectionScene, CharacterCreationScene],
+    scene: [MenuScene, CircusScene, BattleAIScene, CharacterSelectionScene, CharacterCreationScene, HighScoreScene],
     backgroundColor: '#34495e',
     pixelArt: false,
     roundPixels: false

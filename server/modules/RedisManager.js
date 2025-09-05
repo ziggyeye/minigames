@@ -853,6 +853,128 @@ export class RedisManager {
   }
 
   /**
+   * Get top 10 characters by win rate across all users
+   * @returns {Promise<Array>} Array of character objects with battle stats
+   */
+  async getTopCharactersByWinRate(limit = 10) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning empty top characters list');
+        return [];
+      }
+
+      console.log('🏆 Getting top characters by win rate...');
+
+      // Get all character keys that have battle stats
+      const battleStatsPattern = `${this.BATTLE_STATS_KEY}:*`;
+      const battleStatsKeys = await this.client.keys(battleStatsPattern);
+
+      if (battleStatsKeys.length === 0) {
+        console.log('ℹ️  No battle stats found');
+        return [];
+      }
+
+      // Get all battle stats and calculate win rates
+      const characterStats = [];
+      for (const statsKey of battleStatsKeys) {
+        try {
+          const stats = await this.client.hGetAll(statsKey);
+          if (stats && Object.keys(stats).length > 0) {
+            const totalBattles = parseInt(stats.totalBattles) || 0;
+            const wins = parseInt(stats.wins) || 0;
+            
+            // Only include characters with at least 1 battle
+            if (totalBattles > 0) {
+              const winRate = Math.round((wins / totalBattles) * 100);
+              
+              // Extract discordUserId and characterName from the key
+              // Key format: minigames:battle_stats:discordUserId:characterName
+              const keyParts = statsKey.split(':');
+              if (keyParts.length >= 4) {
+                const discordUserId = keyParts[2];
+                const characterName = keyParts.slice(3).join(':'); // Handle character names with colons
+                
+                // Get character details
+                const character = await this.getCharacterByUserAndName(discordUserId, characterName);
+                if (character) {
+                  characterStats.push({
+                    characterName: character.characterName,
+                    description: character.description,
+                    stats: character.stats,
+                    discordUserId: discordUserId,
+                    totalBattles: totalBattles,
+                    wins: wins,
+                    losses: parseInt(stats.losses) || 0,
+                    ties: parseInt(stats.ties) || 0,
+                    winRate: winRate,
+                    lastBattleDate: stats.lastBattleDate || null
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error processing battle stats key:', statsKey, error);
+        }
+      }
+
+      // Sort by win rate (descending), then by total battles (descending) as tiebreaker
+      characterStats.sort((a, b) => {
+        if (b.winRate !== a.winRate) {
+          return b.winRate - a.winRate;
+        }
+        return b.totalBattles - a.totalBattles;
+      });
+
+      // Return top N characters
+      const topCharacters = characterStats.slice(0, limit);
+      console.log(`🏆 Retrieved top ${topCharacters.length} characters by win rate`);
+      
+      return topCharacters;
+
+    } catch (error) {
+      console.error('❌ Error getting top characters by win rate:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a character by user ID and character name
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
+   * @returns {Promise<Object|null>} Character object or null
+   */
+  async getCharacterByUserAndName(discordUserId, characterName) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning null for character');
+        return null;
+      }
+
+      // Get character ID from user's character list
+      const userCharactersKey = `${this.USER_CHARACTERS_KEY}:${discordUserId}`;
+      const characterIds = await this.client.zRange(userCharactersKey, 0, -1);
+
+      // Find the character with matching name
+      for (const characterId of characterIds) {
+        const characterKey = `${this.CHARACTERS_KEY}:${characterId}`;
+        const characterData = await this.client.get(characterKey);
+        if (characterData) {
+          const character = JSON.parse(characterData);
+          if (character.characterName === characterName) {
+            return character;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting character by user and name:', error);
+      return null;
+    }
+  }
+
+  /**
    * Disconnect from Redis
    */
   async disconnect() {

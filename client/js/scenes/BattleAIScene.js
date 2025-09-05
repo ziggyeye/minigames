@@ -310,7 +310,7 @@ export default class BattleAIScene extends Phaser.Scene {
         if (this.battleAgainButton) {
             if (cooldownStatus.onCooldown) {
                 const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-                this.battleAgainButton.setText(`⏰ Cooldown: ${timeRemaining}`);
+                this.battleAgainButton.setText(`Cooldown: ${timeRemaining}`);
                 this.battleAgainButton.setBackgroundColor('#95a5a6');
                 this.battleAgainButton.disableInteractive();
             } else {
@@ -1446,7 +1446,7 @@ export default class BattleAIScene extends Phaser.Scene {
         const modalWidth = 600;
         const modalHeight = 700;
         const modalX = centerX - modalWidth / 2;
-        const modalY = centerY - modalHeight / 2;
+        const modalY = centerY - modalHeight / 2-100;
 
         const resultBg = this.add.graphics();
         resultBg.fillStyle(0x2c3e50, 0.95); // Dark grey background

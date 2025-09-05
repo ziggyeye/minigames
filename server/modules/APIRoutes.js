@@ -54,6 +54,9 @@ export class APIRoutes {
     // Battle gems endpoints
     app.post('/api/battleGems/add', this.handleAddBattleGems.bind(this));
     app.get('/api/battleGems/:discordUserId', this.handleGetBattleGems.bind(this));
+    
+    // Top characters by win rate endpoint
+    app.get('/api/topCharacters', this.handleGetTopCharacters.bind(this));
 
   }
 
@@ -539,7 +542,7 @@ export class APIRoutes {
    */
   async handleBattleSimulation(req, res) {
     try {
-      const { clientCharacter, discordUserId, useBattleGem = false } = req.body;
+      const { playerCharacter, discordUserId, useBattleGem = false } = req.body;
       
       // Check battle cooldown first
       const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
@@ -573,14 +576,6 @@ export class APIRoutes {
         }
       }
 
-      const characters = await this.redisManager.getUserCharacters(discordUserId.trim(), 10);
-      const firstCharacter = characters[0];
-
-      let playerCharacter  = {
-        name: firstCharacter.characterName,
-        description: firstCharacter.description,
-        stats: firstCharacter.stats
-    };
       // Validate required fields
       if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
         return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
@@ -1621,6 +1616,38 @@ Format your result as a single paragraph.`;
 
     } catch (error) {
       console.error('❌ Error getting battle gems:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle get top characters by win rate
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetTopCharacters(req, res) {
+    try {
+      const { limit = 10 } = req.query;
+      const limitNum = parseInt(limit);
+      
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
+        return this.sendErrorResponse(res, 400, 'Invalid limit parameter. Must be between 1 and 50.');
+      }
+
+      console.log(`🏆 Getting top ${limitNum} characters by win rate`);
+
+      const topCharacters = await this.redisManager.getTopCharactersByWinRate(limitNum);
+      
+      res.json({
+        success: true,
+        characters: topCharacters,
+        count: topCharacters.length,
+        limit: limitNum,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('❌ Error getting top characters:', error);
       this.sendErrorResponse(res, 500, 'Internal server error', error.message);
     }
   }

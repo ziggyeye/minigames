@@ -11,7 +11,8 @@ const config = {
       battleStatsEndpoint: '/api/battle/stats/:discordUserId',
       characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
-      getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
+      getBattleGemsEndpoint: '/api/battleGems/:discordUserId',
+      topCharactersEndpoint: '/api/topCharacters'
     },
     production: {
       serverUrl: '/server',
@@ -24,7 +25,8 @@ const config = {
       battleStatsEndpoint: '/api/battle/stats/:discordUserId',
       characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
-      getBattleGemsEndpoint: '/api/battleGems/:discordUserId'
+      getBattleGemsEndpoint: '/api/battleGems/:discordUserId',
+      topCharactersEndpoint: '/api/topCharacters'
     }
   };
 
@@ -49,7 +51,8 @@ const config = {
     battleStats: getApiUrl(currentConfig.battleStatsEndpoint),
     characterBattleStats: getApiUrl(currentConfig.characterBattleStatsEndpoint),
     addBattleGems: getApiUrl(currentConfig.addBattleGemsEndpoint),
-    getBattleGems: getApiUrl(currentConfig.getBattleGemsEndpoint)
+    getBattleGems: getApiUrl(currentConfig.getBattleGemsEndpoint),
+    topCharacters: getApiUrl(currentConfig.topCharactersEndpoint)
   };
   
   export default currentConfig;
