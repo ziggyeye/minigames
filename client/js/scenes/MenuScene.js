@@ -181,7 +181,8 @@ export default class MenuScene extends Phaser.Scene {
         this.createGameCard(centerX, 700, '🚧', 'More Games Coming!', 
             'We\'re working on more exciting minigames!', 'coming-soon');
 
-        // Add privacy policy and terms of service links
+        // Add Discord join button and other links
+        this.createDiscordJoinButton();
         this.createPrivacyPolicyLink();
         this.createTermsOfServiceLink();
     }
@@ -260,6 +261,38 @@ export default class MenuScene extends Phaser.Scene {
         
         card.on('pointerdown', () => {
             this.handleGameSelection(card.gameType);
+        });
+    }
+
+    createDiscordJoinButton() {
+        const centerX = this.cameras.main.centerX;
+        const discordY = this.cameras.main.height - 110;
+
+        // Discord join button
+        const discordButton = this.add.text(centerX, discordY, '💬 Join Our Discord Server', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#5865F2', // Discord's brand color
+            padding: { x: 20, y: 10 },
+            stroke: '#000000',
+            strokeThickness: 1
+        }).setOrigin(0.5);
+
+        // Make it interactive
+        discordButton.setInteractive();
+        discordButton.on('pointerover', () => {
+            discordButton.setAlpha(0.9);
+            discordButton.setBackgroundColor('#4752C4'); // Slightly darker Discord color
+        });
+        discordButton.on('pointerout', () => {
+            discordButton.setAlpha(1);
+            discordButton.setBackgroundColor('#5865F2');
+        });
+        discordButton.on('pointerdown', () => {
+            // Open Discord server invite in new tab
+            // Replace 'YOUR_DISCORD_INVITE_CODE' with your actual Discord server invite code
+            window.open('https://discord.gg/CyzEgkcM', '_blank');
         });
     }
 
