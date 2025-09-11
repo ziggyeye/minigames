@@ -46,7 +46,7 @@ export class DiscordManager {
 
     if (!this.isDiscord) {
       console.log("Running in local mode — Discord APIs disabled.");
-      this.currentUser = { id: '123', username: 'TestUser' };
+      this.currentUser = { id: '1234', username: 'TestUser2' };
       this.isInitialized = true;
       return this.currentUser;
     }

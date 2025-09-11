@@ -290,6 +290,11 @@ export default class BattleAIScene extends Phaser.Scene {
                 if (this.battleWithGemButton) {
                     this.battleWithGemButton.setInteractive();
                 }
+                
+                // Enable PVP with gem button if it exists
+                if (this.pvpWithGemButton) {
+                    this.pvpWithGemButton.setInteractive();
+                }
             } else {
                 // Cooldown expired
                 this.battleButton.setText('⚔️ Free Battle!');
@@ -302,6 +307,11 @@ export default class BattleAIScene extends Phaser.Scene {
                 // Disable battle with gem button if it exists
                 if (this.battleWithGemButton) {
                     this.battleWithGemButton.disableInteractive();
+                }
+                
+                // Disable PVP with gem button if it exists
+                if (this.pvpWithGemButton) {
+                    this.pvpWithGemButton.disableInteractive();
                 }
             }
         }
@@ -580,8 +590,17 @@ export default class BattleAIScene extends Phaser.Scene {
         let battleButtonColor = '#e74c3c';
         let battleButtonEnabled = true;
 
+        // PVP Battle button
+        this.pvpBattleButton = this.add.text(centerX - 150, top + 20, '⚔️ PVP Battle', {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#9b59b6', // Purple for PVP
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5);
+
         // Battle with Gem button (next to main battle button)
-        this.battleWithGemButton = this.add.text(centerX, top + 20, '💎 Battle with Gem', {
+        this.battleWithGemButton = this.add.text(centerX + 150, top + 20, '💎 Battle with Gem', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -621,9 +640,29 @@ export default class BattleAIScene extends Phaser.Scene {
         // Store reference to battle button for cooldown updates
         this.battleButton = battleButton;
         
+        // PVP Battle button interaction
+        this.pvpBattleButton.setInteractive();
+        this.pvpBattleButton.on('pointerdown', () => {
+            this.startPVPBattle();
+        });
+
+        // PVP with Gem button
+        this.pvpWithGemButton = this.add.text(centerX - 150, top + 60, '💎 PVP with Gem', {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+            backgroundColor: this.battleGems >= 1 ? '#8e44ad' : '#95a5a6',
+            padding: { x: 12, y: 6 }
+        }).setOrigin(0.5);
+
         if (this.battleGems >= 1) {
             this.battleWithGemButton.on('pointerdown', () => {
                 this.startBattleWithGem();
+            });
+            
+            this.pvpWithGemButton.setInteractive();
+            this.pvpWithGemButton.on('pointerdown', () => {
+                this.startPVPBattleWithGem();
             });
         }
         
@@ -1923,6 +1962,197 @@ export default class BattleAIScene extends Phaser.Scene {
             }
         } catch (error) {
             console.error('❌ Error requesting battle simulation with gem:', error);
+            this.showError('Failed to connect to battle server. Please try again.');
+            this.isLoading = false;
+        }
+    }
+
+    async startPVPBattle() {
+        if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
+            this.showError('No character selected! Please go back and select a character.');
+            return;
+        }
+
+        // Check cooldown
+        const cooldownStatus = this.checkCooldown();
+        if (cooldownStatus.onCooldown) {
+            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+            this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
+            return;
+        }
+
+        this.isLoading = true;
+        this.showLoadingScreen();
+        
+        // Simulate PVP battle on server
+        await this.simulatePVPBattle();
+    }
+
+    async startPVPBattleWithGem() {
+        if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
+            this.showError('No character selected! Please go back and select a character.');
+            return;
+        }
+
+        if (this.battleGems < 1) {
+            this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
+            return;
+        }
+
+        // Start PVP battle using a gem to bypass cooldown
+        this.isLoading = true;
+        this.showLoadingScreen();
+        
+        // Simulate PVP battle on server with gem usage
+        await this.simulatePVPBattleWithGem();
+    }
+
+    async simulatePVPBattle() {
+        try {
+            // Get Discord user ID
+            const discordUserId = this.getDiscordUserId();
+            
+            console.log('⚔️ Requesting PVP battle simulation from server...');
+
+            const response = await fetch(API_ENDPOINTS.pvpBattleSimulation, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Request-Id': `pvp_battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                },
+                body: JSON.stringify({
+                    playerCharacter: this.playerCharacter,
+                    discordUserId: discordUserId
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ PVP Battle simulation completed:', result);
+                
+                // Set the opponent character from server response
+                this.aiCharacter = result.aiCharacter;
+                
+                // Set the battle result from server response
+                this.battleResult = result.battleResult;
+
+                // Update battle statistics from server response
+                if (result.battleStats) {
+                    this.battleStats = result.battleStats;
+                } else {
+                    // Fallback to default stats if server doesn't provide them
+                    this.battleStats = {
+                        totalBattles: 0,
+                        wins: 0,
+                        losses: 0,
+                        ties: 0,
+                        winRate: 0
+                    };
+                }
+
+                // Update character level from server response
+                if (result.characterLevel !== undefined) {
+                    this.characterLevel = result.characterLevel;
+                }
+
+                // Update cooldown from server response
+                if (result.cooldownExpiry) {
+                    this.cooldownExpiry = new Date(result.cooldownExpiry);
+                    console.log('⏰ Battle cooldown set until:', this.cooldownExpiry);
+                }
+
+                // Update battle gems from server response
+                if (result.battleGems !== undefined) {
+                    this.battleGems = result.battleGems;
+                    console.log('💎 Battle gems updated:', this.battleGems);
+                }
+
+                this.isLoading = false;
+                this.showBattleResult();
+            } else {
+                console.error('❌ PVP Battle simulation failed:', result.error);
+                this.showError('PVP Battle simulation failed. Please try again.');
+                this.isLoading = false;
+            }
+        } catch (error) {
+            console.error('❌ Error requesting PVP battle simulation:', error);
+            this.showError('Failed to connect to battle server. Please try again.');
+            this.isLoading = false;
+        }
+    }
+
+    async simulatePVPBattleWithGem() {
+        try {
+            // Get Discord user ID
+            const discordUserId = this.getDiscordUserId();
+            
+            console.log('💎 Requesting PVP battle simulation with gem usage from server...');
+
+            const response = await fetch(API_ENDPOINTS.pvpBattleSimulation, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Request-Id': `pvp_battle_gem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                },
+                body: JSON.stringify({
+                    playerCharacter: this.playerCharacter,
+                    discordUserId: discordUserId,
+                    useBattleGem: true
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ PVP Battle simulation with gem completed:', result);
+                
+                // Set the opponent character from server response
+                this.aiCharacter = result.aiCharacter;
+                
+                // Set the battle result from server response
+                this.battleResult = result.battleResult;
+
+                // Update battle statistics from server response
+                if (result.battleStats) {
+                    this.battleStats = result.battleStats;
+                } else {
+                    // Fallback to default stats if server doesn't provide them
+                    this.battleStats = {
+                        totalBattles: 0,
+                        wins: 0,
+                        losses: 0,
+                        ties: 0,
+                        winRate: 0
+                    };
+                }
+
+                // Update character level from server response
+                if (result.characterLevel !== undefined) {
+                    this.characterLevel = result.characterLevel;
+                }
+
+                // Update cooldown from server response
+                if (result.cooldownExpiry) {
+                    this.cooldownExpiry = new Date(result.cooldownExpiry);
+                    console.log('⏰ Battle cooldown set until:', this.cooldownExpiry);
+                }
+
+                // Update battle gems from server response
+                if (result.battleGems !== undefined) {
+                    this.battleGems = result.battleGems;
+                    console.log('💎 Battle gems updated:', this.battleGems);
+                }
+
+                this.isLoading = false;
+                this.showBattleResult();
+            } else {
+                console.error('❌ PVP Battle simulation with gem failed:', result.error);
+                this.showError('PVP Battle simulation failed. Please try again.');
+                this.isLoading = false;
+            }
+        } catch (error) {
+            console.error('❌ Error requesting PVP battle simulation with gem:', error);
             this.showError('Failed to connect to battle server. Please try again.');
             this.isLoading = false;
         }

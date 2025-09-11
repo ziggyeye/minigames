@@ -12,7 +12,10 @@ const config = {
       characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
       getBattleGemsEndpoint: '/api/battleGems/:discordUserId',
-      topCharactersEndpoint: '/api/topCharacters'
+      topCharactersEndpoint: '/api/topCharacters',
+      pvpBattleSimulationEndpoint: '/api/pvp/battle/simulate',
+      characterPVPBattleStatsEndpoint: '/api/pvp/battle/stats/:discordUserId/:characterName',
+      topPVPCharactersEndpoint: '/api/pvp/topCharacters'
     },
     production: {
       serverUrl: '/server',
@@ -26,7 +29,10 @@ const config = {
       characterBattleStatsEndpoint: '/api/battle/stats/:discordUserId/:characterName',
       addBattleGemsEndpoint: '/api/battleGems/add',
       getBattleGemsEndpoint: '/api/battleGems/:discordUserId',
-      topCharactersEndpoint: '/api/topCharacters'
+      topCharactersEndpoint: '/api/topCharacters',
+      pvpBattleSimulationEndpoint: '/api/pvp/battle/simulate',
+      characterPVPBattleStatsEndpoint: '/api/pvp/battle/stats/:discordUserId/:characterName',
+      topPVPCharactersEndpoint: '/api/pvp/topCharacters'
     }
   };
 
@@ -52,7 +58,10 @@ const config = {
     characterBattleStats: getApiUrl(currentConfig.characterBattleStatsEndpoint),
     addBattleGems: getApiUrl(currentConfig.addBattleGemsEndpoint),
     getBattleGems: getApiUrl(currentConfig.getBattleGemsEndpoint),
-    topCharacters: getApiUrl(currentConfig.topCharactersEndpoint)
+    topCharacters: getApiUrl(currentConfig.topCharactersEndpoint),
+    pvpBattleSimulation: getApiUrl(currentConfig.pvpBattleSimulationEndpoint),
+    characterPVPBattleStats: getApiUrl(currentConfig.characterPVPBattleStatsEndpoint),
+    topPVPCharacters: getApiUrl(currentConfig.topPVPCharactersEndpoint)
   };
   
   export default currentConfig;

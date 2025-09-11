@@ -13,6 +13,8 @@ export class RedisManager {
     this.CHARACTERS_KEY = 'minigames:characters';
     this.USER_CHARACTERS_KEY = 'minigames:user_characters';
     this.BATTLE_STATS_KEY = 'minigames:battle_stats';
+    this.PVP_BATTLE_STATS_KEY = 'minigames:pvp_battle_stats';
+    this.PVP_MATCHMAKING_KEY = 'minigames:pvp_matchmaking';
   }
 
   /**
@@ -971,6 +973,249 @@ export class RedisManager {
     } catch (error) {
       console.error('❌ Error getting character by user and name:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get a random opponent character for PVP (excluding user's own characters)
+   * @param {string} playerDiscordUserId - The player's Discord user ID
+   * @param {string} playerCharacterName - The player's character name
+   * @returns {Promise<Object|null>} Random opponent character or null
+   */
+  async getRandomPVPOpponent(playerDiscordUserId, playerCharacterName) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, cannot get PVP opponent');
+        return null;
+      }
+
+      console.log('⚔️ Finding PVP opponent for:', playerCharacterName, 'user:', playerDiscordUserId);
+
+      // Get all battle stats keys to find characters with battle experience
+      const battleStatsPattern = `${this.BATTLE_STATS_KEY}:*`;
+      const battleStatsKeys = await this.client.keys(battleStatsPattern);
+
+      if (battleStatsKeys.length === 0) {
+        console.log('ℹ️  No characters with battle experience found');
+        return null;
+      }
+
+      // Filter out the player's own characters
+      const opponentKeys = battleStatsKeys.filter(key => {
+        const keyParts = key.split(':');
+        if (keyParts.length >= 4) {
+          const discordUserId = keyParts[2];
+          const characterName = keyParts.slice(3).join(':');
+          return discordUserId !== playerDiscordUserId;
+        }
+        return false;
+      });
+
+      if (opponentKeys.length === 0) {
+        console.log('ℹ️  No other players found for PVP');
+        return null;
+      }
+
+      // Get a random opponent
+      const randomKey = opponentKeys[Math.floor(Math.random() * opponentKeys.length)];
+      const keyParts = randomKey.split(':');
+      const opponentDiscordUserId = keyParts[2];
+      const opponentCharacterName = keyParts.slice(3).join(':');
+
+      // Get the opponent character details
+      const opponentCharacter = await this.getCharacterByUserAndName(opponentDiscordUserId, opponentCharacterName);
+      
+      if (opponentCharacter) {
+        console.log('✅ Found PVP opponent:', opponentCharacter.characterName);
+        return {
+          ...opponentCharacter,
+          discordUserId: opponentDiscordUserId
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting random PVP opponent:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update PVP battle statistics for a character
+   * @param {string} discordUserId - Discord user ID
+   * @param {Object} battleResult - Battle result object
+   * @param {Object} playerCharacter - Player character object
+   * @returns {Promise<Object>} Updated battle statistics
+   */
+  async updatePVPBattleStats(discordUserId, battleResult, playerCharacter) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning default PVP battle stats');
+        return this.getDefaultBattleStats();
+      }
+
+      const statsKey = `${this.PVP_BATTLE_STATS_KEY}:${discordUserId}:${playerCharacter.name}`;
+      const currentStats = await this.getCharacterPVPBattleStats(discordUserId, playerCharacter.name);
+
+      // Update stats based on battle result
+      const updatedStats = { ...currentStats };
+      updatedStats.totalBattles += 1;
+      updatedStats.lastBattleDate = new Date().toISOString();
+
+      if (battleResult.winner.name === playerCharacter.name) {
+        updatedStats.wins += 1;
+      } else if (battleResult.winner.name === battleResult.loser.name) {
+        updatedStats.ties += 1;
+      } else {
+        updatedStats.losses += 1;
+      }
+
+      // Calculate win rate
+      updatedStats.winRate = updatedStats.totalBattles > 0 
+        ? Math.round((updatedStats.wins / updatedStats.totalBattles) * 100) 
+        : 0;
+
+      // Save to Redis
+      await this.client.hSet(statsKey, {
+        totalBattles: updatedStats.totalBattles.toString(),
+        wins: updatedStats.wins.toString(),
+        losses: updatedStats.losses.toString(),
+        ties: updatedStats.ties.toString(),
+        winRate: updatedStats.winRate.toString(),
+        lastBattleDate: updatedStats.lastBattleDate
+      });
+
+      console.log('✅ PVP Battle stats updated for character:', playerCharacter.name, updatedStats);
+      return updatedStats;
+
+    } catch (error) {
+      console.error('❌ Error updating PVP battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Get PVP battle statistics for a specific character
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
+   * @returns {Promise<Object>} Character PVP battle statistics
+   */
+  async getCharacterPVPBattleStats(discordUserId, characterName) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning default PVP battle stats');
+        return this.getDefaultBattleStats();
+      }
+
+      const statsKey = `${this.PVP_BATTLE_STATS_KEY}:${discordUserId}:${characterName}`;
+      const stats = await this.client.hGetAll(statsKey);
+
+      if (!stats || Object.keys(stats).length === 0) {
+        return this.getDefaultBattleStats();
+      }
+
+      const battleStats = {
+        totalBattles: parseInt(stats.totalBattles) || 0,
+        wins: parseInt(stats.wins) || 0,
+        losses: parseInt(stats.losses) || 0,
+        ties: parseInt(stats.ties) || 0,
+        lastBattleDate: stats.lastBattleDate || null
+      };
+
+      battleStats.winRate = battleStats.totalBattles > 0 
+        ? Math.round((battleStats.wins / battleStats.totalBattles) * 100) 
+        : 0;
+
+      return battleStats;
+    } catch (error) {
+      console.error('❌ Error getting character PVP battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
+
+  /**
+   * Get top 10 characters by PVP win rate across all users
+   * @returns {Promise<Array>} Array of character objects with PVP battle stats
+   */
+  async getTopPVPCharactersByWinRate(limit = 10) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, returning empty top PVP characters list');
+        return [];
+      }
+
+      console.log('🏆 Getting top PVP characters by win rate...');
+
+      // Get all PVP battle stats keys
+      const pvpStatsPattern = `${this.PVP_BATTLE_STATS_KEY}:*`;
+      const pvpStatsKeys = await this.client.keys(pvpStatsPattern);
+
+      if (pvpStatsKeys.length === 0) {
+        console.log('ℹ️  No PVP battle stats found');
+        return [];
+      }
+
+      // Get all PVP battle stats and calculate win rates
+      const characterStats = [];
+      for (const statsKey of pvpStatsKeys) {
+        try {
+          const stats = await this.client.hGetAll(statsKey);
+          if (stats && Object.keys(stats).length > 0) {
+            const totalBattles = parseInt(stats.totalBattles) || 0;
+            const wins = parseInt(stats.wins) || 0;
+            
+            // Only include characters with at least 1 PVP battle
+            if (totalBattles > 0) {
+              const winRate = Math.round((wins / totalBattles) * 100);
+              
+              // Extract discordUserId and characterName from the key
+              // Key format: minigames:pvp_battle_stats:discordUserId:characterName
+              const keyParts = statsKey.split(':');
+              if (keyParts.length >= 4) {
+                const discordUserId = keyParts[2];
+                const characterName = keyParts.slice(3).join(':');
+                
+                // Get character details
+                const character = await this.getCharacterByUserAndName(discordUserId, characterName);
+                if (character) {
+                  characterStats.push({
+                    characterName: character.characterName,
+                    description: character.description,
+                    stats: character.stats,
+                    discordUserId: discordUserId,
+                    totalBattles: totalBattles,
+                    wins: wins,
+                    losses: parseInt(stats.losses) || 0,
+                    ties: parseInt(stats.ties) || 0,
+                    winRate: winRate,
+                    lastBattleDate: stats.lastBattleDate || null
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error processing PVP battle stats key:', statsKey, error);
+        }
+      }
+
+      // Sort by win rate (descending), then by total battles (descending) as tiebreaker
+      characterStats.sort((a, b) => {
+        if (b.winRate !== a.winRate) {
+          return b.winRate - a.winRate;
+        }
+        return b.totalBattles - a.totalBattles;
+      });
+
+      // Return top N characters
+      const topCharacters = characterStats.slice(0, limit);
+      console.log(`🏆 Retrieved top ${topCharacters.length} PVP characters by win rate`);
+      
+      return topCharacters;
+
+    } catch (error) {
+      console.error('❌ Error getting top PVP characters by win rate:', error);
+      return [];
     }
   }
 

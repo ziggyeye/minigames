@@ -57,6 +57,15 @@ export class APIRoutes {
     
     // Top characters by win rate endpoint
     app.get('/api/topCharacters', this.handleGetTopCharacters.bind(this));
+    
+    // PVP battle simulation endpoint
+    app.post('/api/pvp/battle/simulate', this.handlePVPBattleSimulation.bind(this));
+    
+    // PVP battle statistics endpoints
+    app.get('/api/pvp/battle/stats/:discordUserId/:characterName', this.handleGetCharacterPVPBattleStats.bind(this));
+    
+    // Top PVP characters by win rate endpoint
+    app.get('/api/pvp/topCharacters', this.handleGetTopPVPCharacters.bind(this));
 
   }
 
@@ -1648,6 +1657,226 @@ Format your result as a single paragraph.`;
 
     } catch (error) {
       console.error('❌ Error getting top characters:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle PVP battle simulation
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handlePVPBattleSimulation(req, res) {
+    try {
+      const { playerCharacter, discordUserId, useBattleGem = false } = req.body;
+      
+      // Check battle cooldown first
+      const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+      
+      if (cooldownStatus.onCooldown) {
+        if (useBattleGem) {
+          // Check if user has enough battle gems
+          const currentGems = await this.redisManager.getBattleGems(discordUserId.trim());
+          if (currentGems < 1) {
+            const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+            return this.sendErrorResponse(res, 429, `Battle cooldown active and insufficient battle gems. Please wait ${timeRemainingSeconds} seconds or obtain more battle gems.`, {
+              cooldownExpiry: cooldownStatus.cooldownExpiry,
+              timeRemaining: cooldownStatus.timeRemaining,
+              battleGems: currentGems
+            });
+          }
+          
+          // Spend 1 battle gem to bypass cooldown
+          const spendResult = await this.redisManager.spendBattleGems(discordUserId.trim(), 1);
+          if (!spendResult.success) {
+            return this.sendErrorResponse(res, 400, spendResult.message);
+          }
+          
+          console.log(`💎 User ${discordUserId} spent 1 battle gem to bypass cooldown`);
+        } else {
+          const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+          return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
+            cooldownExpiry: cooldownStatus.cooldownExpiry,
+            timeRemaining: cooldownStatus.timeRemaining
+          });
+        }
+      }
+
+      // Validate required fields
+      if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
+        return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
+      }
+
+      // Generate idempotency key
+      const requestId = req.headers['x-request-id'] || 
+                       req.headers['x-idempotency-key'] || 
+                       `pvp_battle_sim:${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const idempotencyKey = `pvp_battle_simulation:${requestId}`;
+
+      // Check if this request was already processed
+      if (this.redisManager.isReady()) {
+        const existingResult = await this.redisManager.client.get(idempotencyKey);
+        if (existingResult) {
+          console.log(`🔄 Idempotency: Returning cached PVP battle simulation result for ${requestId}`);
+          return res.json(JSON.parse(existingResult));
+        }
+      }
+
+      console.log(`⚔️ Simulating PVP battle for character: `, playerCharacter);
+
+      // Get a random PVP opponent
+      const pvpOpponent = await this.redisManager.getRandomPVPOpponent(discordUserId.trim(), playerCharacter.name);
+      
+      if (!pvpOpponent) {
+        return this.sendErrorResponse(res, 404, 'No opponents available for PVP battle. Try again later!');
+      }
+
+      // Transform PVP opponent to match AI character structure
+      const aiCharacter = {
+        name: pvpOpponent.characterName,
+        description: pvpOpponent.description,
+        stats: pvpOpponent.stats
+      };
+
+      console.log('⚔️ PVP Battle:', playerCharacter.name, 'vs', aiCharacter.name);
+      
+      // Simulate battle
+      const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
+
+      // Update PVP battle statistics for the player
+      const battleStats = await this.redisManager.updatePVPBattleStats(discordUserId, battleResult, playerCharacter);
+      
+      // Update PVP battle statistics for the opponent
+      await this.redisManager.updatePVPBattleStats(pvpOpponent.discordUserId, battleResult, pvpOpponent);
+
+      // Get updated character level
+      const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
+
+      let cooldownExpiry = null;
+      // Set battle cooldown
+      if (!useBattleGem)
+      {
+        cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
+      }
+      else {
+        const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+        cooldownExpiry = cooldownStatus.cooldownExpiry;
+      }
+
+      // Get updated battle gems count
+      const battleGems = await this.redisManager.getBattleGems(discordUserId);
+
+      const response = {
+        success: true,
+        playerCharacter: playerCharacter,
+        aiCharacter: aiCharacter, // Use aiCharacter for consistency with regular battles
+        pvpOpponent: pvpOpponent, // Include original PVP opponent data
+        battleResult: battleResult,
+        battleStats: battleStats,
+        characterLevel: characterLevel,
+        cooldownExpiry: cooldownExpiry ? cooldownExpiry.toISOString() : null,
+        battleGems: battleGems,
+        isPVP: true,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Cache the result for idempotency (expires in 1 hour)
+      if (this.redisManager.isReady()) {
+        await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
+      }
+      
+      // Post battle summary to Discord (non-blocking)
+      try {
+       // if (this.discordManager && this.discordManager.isBotReady()) {
+          console.log(`📤 Posting PVP battle summary to Discord for user ${discordUserId}`);
+          const discordResult = await this.discordManager.postBattleSummaryToDiscord(response, discordUserId);
+          if (discordResult.success) {
+            console.log('✅ PVP battle summary posted to Discord successfully');
+          } else {
+            console.warn('⚠️ Failed to post PVP battle summary to Discord:', discordResult.error);
+          }
+        // } else {
+        //   console.log('ℹ️ Discord bot not available, skipping battle summary post');
+        // }
+      } catch (discordError) {
+        console.warn('⚠️ Error posting to Discord (non-critical):', discordError.message);
+        // Continue with battle response even if Discord fails
+      }
+      
+      res.json(response);
+
+    } catch (error) {
+      console.error('❌ Error in PVP battle simulation:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle get character PVP battle statistics
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetCharacterPVPBattleStats(req, res) {
+    try {
+      const { discordUserId, characterName } = req.params;
+      
+      if (!discordUserId) {
+        return this.sendErrorResponse(res, 400, 'Missing required parameter: discordUserId');
+      }
+      
+      if (!characterName) {
+        return this.sendErrorResponse(res, 400, 'Missing required parameter: characterName');
+      }
+
+      console.log(`📊 Getting PVP battle statistics for character: ${characterName} (user: ${discordUserId})`);
+
+      const battleStats = await this.redisManager.getCharacterPVPBattleStats(discordUserId, characterName);
+      
+      res.json({
+        success: true,
+        discordUserId: discordUserId,
+        characterName: characterName,
+        battleStats: battleStats,
+        isPVP: true,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('❌ Error getting character PVP battle statistics:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Handle get top PVP characters by win rate
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetTopPVPCharacters(req, res) {
+    try {
+      const { limit = 10 } = req.query;
+      const limitNum = parseInt(limit);
+      
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
+        return this.sendErrorResponse(res, 400, 'Invalid limit parameter. Must be between 1 and 50.');
+      }
+
+      console.log(`🏆 Getting top ${limitNum} PVP characters by win rate`);
+
+      const topCharacters = await this.redisManager.getTopPVPCharactersByWinRate(limitNum);
+      
+      res.json({
+        success: true,
+        characters: topCharacters,
+        count: topCharacters.length,
+        limit: limitNum,
+        isPVP: true,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('❌ Error getting top PVP characters:', error);
       this.sendErrorResponse(res, 500, 'Internal server error', error.message);
     }
   }

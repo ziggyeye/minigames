@@ -176,9 +176,13 @@ export default class MenuScene extends Phaser.Scene {
         // High Scores Card
         this.createGameCard(centerX, 500, '🏆', 'High Scores', 
             'View the top characters by win rate!', 'high-scores');
-
+        
+        // PVP High Scores Card
+        this.createGameCard(centerX, 700, '⚔️', 'PVP High Scores', 
+            'View the top PVP champions!', 'pvp-high-scores');
+        
         // Coming Soon Card
-        this.createGameCard(centerX, 700, '🚧', 'More Games Coming!', 
+        this.createGameCard(centerX, 900, '🚧', 'More Games Coming!', 
             'We\'re working on more exciting minigames!', 'coming-soon');
 
         // Add Discord join button and other links
@@ -430,13 +434,16 @@ export default class MenuScene extends Phaser.Scene {
             case 'battle-ai':
                 this.scene.start('CharacterSelectionScene');
                 break;
-            case 'high-scores':
-                this.scene.start('HighScoreScene');
-                break;
-            case 'coming-soon':
-                // Show coming soon message
-                this.showComingSoonMessage();
-                break;
+        case 'high-scores':
+            this.scene.start('HighScoreScene');
+            break;
+        case 'pvp-high-scores':
+            this.scene.start('PVPHighScoreScene');
+            break;
+        case 'coming-soon':
+            // Show coming soon message
+            this.showComingSoonMessage();
+            break;
             default:
                 console.log(`Unknown game type: ${gameType}`);
         }
