@@ -282,9 +282,17 @@ export default class BattleAIScene extends Phaser.Scene {
         if (this.battleButton) {
             if (cooldownStatus.onCooldown) {
                 const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-                this.battleButton.setText(`⏰ Cooldown: ${timeRemaining}`);
-                this.battleButton.setBackgroundColor('#95a5a6');
-                this.battleButton.disableInteractive();
+                 this.battleButton.list[1].setText(`⏰ Cooldown: ${timeRemaining}`);
+                 this.battleButton.list[0].clear();
+                 this.battleButton.list[0].fillStyle(0x95a5a6, 1);
+                 this.battleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                 this.battleButton.disableInteractive();
+
+                 this.pvpBattleButton.list[1].setText(`⏰ Cooldown: ${timeRemaining}`);
+                 this.pvpBattleButton.list[0].clear();
+                 this.pvpBattleButton.list[0].fillStyle(0x95a5a6, 1);
+                 this.pvpBattleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                 this.pvpBattleButton.disableInteractive();
                 
                 // Enable battle with gem button if it exists
                 if (this.battleWithGemButton) {
@@ -297,40 +305,25 @@ export default class BattleAIScene extends Phaser.Scene {
                 }
             } else {
                 // Cooldown expired
-                this.battleButton.setText('⚔️ Free Battle!');
-                this.battleButton.setBackgroundColor('#e74c3c');
-                this.battleButton.setInteractive();
-                this.battleButton.on('pointerdown', () => {
-                    this.startBattle();
-                });
+                 console.log('Cooldown expired');
+                 this.battleButton.list[1].setText('⚔️ PVE Battle!');
+                 this.battleButton.list[0].clear();
+                 this.battleButton.list[0].fillStyle(0x0300ff, 1);
+                 this.battleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                 this.battleButton.setInteractive();
+                 this.battleButton.on('pointerdown', () => {
+                     this.startBattle();
+                 });
 
-                // Disable battle with gem button if it exists
-                if (this.battleWithGemButton) {
-                    this.battleWithGemButton.disableInteractive();
-                }
-                
-                // Disable PVP with gem button if it exists
-                if (this.pvpWithGemButton) {
-                    this.pvpWithGemButton.disableInteractive();
-                }
-            }
-        }
-        
-        // Update battle again button (in battle result screen)
-        if (this.battleAgainButton) {
-            if (cooldownStatus.onCooldown) {
-                const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-                this.battleAgainButton.setText(`Cooldown: ${timeRemaining}`);
-                this.battleAgainButton.setBackgroundColor('#95a5a6');
-                this.battleAgainButton.disableInteractive();
-            } else {
-                // Cooldown expired
-                this.battleAgainButton.setText('⚔️ Battle Again!');
-                this.battleAgainButton.setBackgroundColor('#3498db');
-                this.battleAgainButton.setInteractive();
-                this.battleAgainButton.on('pointerdown', () => {
-                    this.startNewBattle();
-                });
+                 this.pvpBattleButton.list[1].setText('⚔️ PVP Battle!');
+                 this.pvpBattleButton.list[0].clear();
+                 this.pvpBattleButton.list[0].fillStyle(0x9b59b6, 1);
+                 this.pvpBattleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                 this.pvpBattleButton.setInteractive();
+                 this.pvpBattleButton.on('pointerdown', () => {
+                     this.startPVPBattle();
+                 });
+
             }
         }
         
@@ -479,6 +472,162 @@ export default class BattleAIScene extends Phaser.Scene {
         // });
     }
 
+    createRoundedButton(x, y, w, h, text, color) {
+
+        const fontSize = '18px';
+        // Create background graphics
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(color, 1);
+        buttonBg.fillRoundedRect(0, 0, w, h, 12); // draw rounded background
+
+        // Add text on top
+        let buttonText = this.add.text(w/2, h/2, text, {
+            fontSize: '18px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#ffffff',
+        });
+
+        buttonText.setOrigin(0.5);
+
+        // Group them
+        const button = this.add.container(x-w/2, y-h/2, [buttonBg, buttonText]);
+
+        // Make container interactive with a rectangle hit area
+        button.setSize(w, h);
+        button.setInteractive();
+
+        return button;
+    }
+
+    showBattleUI(top) {
+        const centerX = this.cameras.main.centerX;
+        const centerY = this.cameras.main.centerY;
+         // Check cooldown status
+         const cooldownStatus = this.checkCooldown();
+        
+         // Battle button
+         let battleButtonText = '⚔️ PVE Battle!';
+         let battleButtonColor = 0x0300ff;
+         let battleButtonEnabled = true;
+         let battlePVPButtonText = '⚔️ PVP Battle!';
+         
+
+        this.battleWithGemButton = this.createRoundedButton(centerX-100, top + 50, 180, 40, '💎 PVE with Gem', 0x9b59b6);
+        this.pvpWithGemButton = this.createRoundedButton(centerX+100, top + 50, 180, 40, '💎 PVP with Gem', 0x9b59b6);
+         
+         if (cooldownStatus.onCooldown) {
+             const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+             battleButtonText = `⏰ Cooldown: ${timeRemaining}`;
+             battleButtonColor = 0x95a5a6;
+             battleButtonEnabled = false;
+
+             battlePVPButtonText =`⏰ Cooldown: ${timeRemaining}`;
+         
+            //   this.battleWithGemButton.setInteractive();
+            //   this.battleWithGemButton.list[0].clear();
+            //   this.battleWithGemButton.list[0].fillStyle(0x9b59b6, 1);
+            //   this.battleWithGemButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+
+            // console.log('battleButtonEnabled', battleButtonEnabled);
+         }
+         else {
+            // this.battleWithGemButton.setBackgroundColor('#95a5a6');
+            //  this.battleWithGemButton.list[0].clear();
+            //  this.battleWithGemButton.list[0].fillStyle(0x95a5a6, 1);
+            //  this.battleWithGemButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+            //  this.battleWithGemButton.disableInteractive();
+            //  console.log('NO', battleButtonEnabled);
+         }
+
+         this.battleButton = this.createRoundedButton(centerX-100, top, 180, 40, battleButtonText, battleButtonColor);
+         // PVP Battle button
+         this.pvpBattleButton = this.createRoundedButton(centerX+100, top, 180, 40, battlePVPButtonText, battleButtonColor);
+
+         if (battleButtonEnabled) {
+            console.log('battleButtonEnabled', battleButtonEnabled);
+            this.battleButton.setInteractive();
+             this.battleButton.on('pointerdown', () => {
+                console.log('battleButton.onpointerdown');
+                 this.startBattle();
+             });
+
+             this.pvpBattleButton.setInteractive();
+             this.pvpBattleButton.on('pointerdown', () => {
+                 this.startPVPBattle();
+             });
+
+         }
+ 
+         if (this.battleGems >= 1) {
+             this.battleWithGemButton.on('pointerdown', () => {
+                 this.startBattleWithGem();
+             });
+             
+             this.pvpWithGemButton.setInteractive();
+             this.pvpWithGemButton.on('pointerdown', () => {
+                 this.startPVPBattleWithGem();
+             });
+         }
+         
+         // Start cooldown timer if on cooldown
+         if (cooldownStatus.onCooldown) {
+             this.startCooldownTimer();
+         }
+ 
+         // Battle gems display and add button
+         const gemsY = top + 120;
+         
+         // Battle gems label
+         this.add.text(centerX-100, gemsY, '💎 Battle Gems:', {
+             fontSize: '16px',
+             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+             color: '#f39c12',
+             fontStyle: 'bold'
+         });
+ 
+         // Battle gems count
+         this.add.text(centerX+30, gemsY - 4, `${this.battleGems}/5`, {
+             fontSize: '16px',
+             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+             color: '#ffffff',
+             backgroundColor: '#34495e',
+             padding: { x: 10, y: 5 }
+         });
+ 
+         // Add battle gems button (disabled if at max)
+         const addGemsButton = this.add.text(centerX, gemsY+50, '➕ Add Gems', {
+             fontSize: '14px',
+             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+             color: '#ffffff',
+             backgroundColor: this.battleGems >= 5 ? '#95a5a6' : '#27ae60',
+             padding: { x: 15, y: 8 }
+         }).setOrigin(0.5);
+         
+         if (this.battleGems < 5) {
+             addGemsButton.setInteractive();
+             addGemsButton.on('pointerdown', () => {
+                 this.addBattleGems();
+             });
+         }
+ 
+         // Character status
+         if (this.playerCharacter && this.playerCharacter.name) {
+             this.add.text(centerX, gemsY + 100, `✅ Ready to battle with ${this.playerCharacter.name}`, {
+                 fontSize: '12px',
+                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                 color: '#2ecc71',
+                 alpha: 0.8
+             }).setOrigin(0.5);
+         } else {
+             this.add.text(centerX, gemsY + 100, '⚠️ No character selected - go back to select a character', {
+                 fontSize: '12px',
+                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                 color: '#f39c12',
+                 alpha: 0.8
+             }).setOrigin(0.5);
+         }
+    }
+
     showCharacterData() {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
@@ -582,147 +731,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
         top += 100;
 
-        // Check cooldown status
-        const cooldownStatus = this.checkCooldown();
-        
-        // Battle button
-        let battleButtonText = '⚔️ Free Battle!';
-        let battleButtonColor = '#e74c3c';
-        let battleButtonEnabled = true;
-
-        // PVP Battle button
-        this.pvpBattleButton = this.add.text(centerX - 150, top + 20, '⚔️ PVP Battle', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#9b59b6', // Purple for PVP
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
-
-        // Battle with Gem button (next to main battle button)
-        this.battleWithGemButton = this.add.text(centerX + 150, top + 20, '💎 Battle with Gem', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: this.battleGems >= 1 ? '#f39c12' : '#95a5a6',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
-        
-        if (cooldownStatus.onCooldown) {
-            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-            battleButtonText = `⏰ Cooldown: ${timeRemaining}`;
-            battleButtonColor = '#95a5a6';
-            battleButtonEnabled = false;
-        
-            this.battleWithGemButton.setInteractive();
-            this.battleWithGemButton.setBackgroundColor('#f39c12');
-        }
-        else {
-            this.battleWithGemButton.setBackgroundColor('#95a5a6');
-            this.battleWithGemButton.disableInteractive();
-        }
-        
-        const battleButton = this.add.text(centerX, top - 20, battleButtonText, {
-            fontSize: '24px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: battleButtonColor,
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5);
-        
-        if (battleButtonEnabled) {
-            battleButton.setInteractive();
-            battleButton.on('pointerdown', () => {
-                this.startBattle();
-            });
-        }
-        
-        // Store reference to battle button for cooldown updates
-        this.battleButton = battleButton;
-        
-        // PVP Battle button interaction
-        this.pvpBattleButton.setInteractive();
-        this.pvpBattleButton.on('pointerdown', () => {
-            this.startPVPBattle();
-        });
-
-        // PVP with Gem button
-        this.pvpWithGemButton = this.add.text(centerX - 150, top + 60, '💎 PVP with Gem', {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: this.battleGems >= 1 ? '#8e44ad' : '#95a5a6',
-            padding: { x: 12, y: 6 }
-        }).setOrigin(0.5);
-
-        if (this.battleGems >= 1) {
-            this.battleWithGemButton.on('pointerdown', () => {
-                this.startBattleWithGem();
-            });
-            
-            this.pvpWithGemButton.setInteractive();
-            this.pvpWithGemButton.on('pointerdown', () => {
-                this.startPVPBattleWithGem();
-            });
-        }
-        
-        // Start cooldown timer if on cooldown
-        if (cooldownStatus.onCooldown) {
-            this.startCooldownTimer();
-        }
-
-        // Battle gems display and add button
-        const gemsY = top + 80;
-        
-        // Battle gems label
-        this.add.text(centerX - 250, gemsY, '💎 Battle Gems:', {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#f39c12',
-            fontStyle: 'bold'
-        });
-
-        // Battle gems count
-        this.add.text(centerX - 110, gemsY - 8, `${this.battleGems}/5`, {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#34495e',
-            padding: { x: 10, y: 5 }
-        });
-
-        // Add battle gems button (disabled if at max)
-        const addGemsButton = this.add.text(centerX + 50, gemsY, '➕ Add Gems', {
-            fontSize: '14px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: this.battleGems >= 5 ? '#95a5a6' : '#27ae60',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
-        
-        if (this.battleGems < 5) {
-            addGemsButton.setInteractive();
-            addGemsButton.on('pointerdown', () => {
-                this.addBattleGems();
-            });
-        }
-
-        // Character status
-        if (this.playerCharacter && this.playerCharacter.name) {
-            this.add.text(centerX, gemsY + 40, `✅ Ready to battle with ${this.playerCharacter.name}`, {
-                fontSize: '12px',
-                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                color: '#2ecc71',
-                alpha: 0.8
-            }).setOrigin(0.5);
-        } else {
-            this.add.text(centerX, gemsY + 40, '⚠️ No character selected - go back to select a character', {
-                fontSize: '12px',
-                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                color: '#f39c12',
-                alpha: 0.8
-            }).setOrigin(0.5);
-        }
+        this.showBattleUI(top);
     }
 
     createReadOnlyStatsDisplay(centerX, startY) {
@@ -1629,69 +1638,118 @@ export default class BattleAIScene extends Phaser.Scene {
         // Battle again button
         const buttonY = statsY + 120;
         
-        // Check cooldown status for battle again button
-        const battleAgainCooldownStatus = this.checkCooldown();
+        // // Check cooldown status for battle again button
+        // const battleAgainCooldownStatus = this.checkCooldown();
         
-        let battleAgainButtonText = '⚔️ Battle Again!';
-        let battleAgainButtonColor = '#3498db';
-        let battleAgainButtonEnabled = true;
+        // let battleAgainButtonText = '⚔️ Battle Again!';
+        // let battleAgainButtonColor = '#3498db';
+        // let battleAgainButtonEnabled = true;
         
-        if (battleAgainCooldownStatus.onCooldown) {
-            const timeRemaining = this.formatTimeRemaining(battleAgainCooldownStatus.timeRemaining);
-            battleAgainButtonText = `⏰ Cooldown: ${timeRemaining}`;
-            battleAgainButtonColor = '#95a5a6';
-            battleAgainButtonEnabled = false;
-        }
+        // if (battleAgainCooldownStatus.onCooldown) {
+        //     const timeRemaining = this.formatTimeRemaining(battleAgainCooldownStatus.timeRemaining);
+        //     battleAgainButtonText = `⏰ Cooldown: ${timeRemaining}`;
+        //     battleAgainButtonColor = '#95a5a6';
+        //     battleAgainButtonEnabled = false;
+        // }
         
-        const battleAgainButton = this.add.text(centerX, buttonY, battleAgainButtonText, {
-            fontSize: '20px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: battleAgainButtonColor,
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5);
+        // const battleAgainButton = this.add.text(centerX, buttonY, battleAgainButtonText, {
+        //     fontSize: '20px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: battleAgainButtonColor,
+        //     padding: { x: 20, y: 10 }
+        // }).setOrigin(0.5);
         
-        if (battleAgainButtonEnabled) {
-            battleAgainButton.setInteractive();
-            battleAgainButton.on('pointerdown', () => {
-                this.startNewBattle();
-            });
-        }
+        // if (battleAgainButtonEnabled) {
+        //     battleAgainButton.setInteractive();
+        //     battleAgainButton.on('pointerdown', () => {
+        //         this.startNewBattle();
+        //     });
+        // }
         
-        // Store reference to battle again button for cooldown updates
-        this.battleAgainButton = battleAgainButton;
+        // // Store reference to battle again button for cooldown updates
+        // this.battleAgainButton = battleAgainButton;
 
-        // Battle with Gem button (next to battle again button)
-        const battleAgainWithGemButton = this.add.text(centerX, buttonY+45, '💎 Battle with Gem', {
-            fontSize: '18px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: this.battleGems >= 1 ? '#f39c12' : '#95a5a6',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
+        // // Battle with Gem button (next to battle again button)
+        // const battleAgainWithGemButton = this.add.text(centerX, buttonY+45, '💎 Battle with Gem', {
+        //     fontSize: '18px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: this.battleGems >= 1 ? '#f39c12' : '#95a5a6',
+        //     padding: { x: 15, y: 8 }
+        // }).setOrigin(0.5);
         
-        if (this.battleGems >= 1) {
-            battleAgainWithGemButton.setInteractive();
-            battleAgainWithGemButton.on('pointerdown', () => {
-                this.startNewBattleWithGem();
-            });
-        }
+        // if (this.battleGems >= 1) {
+        //     battleAgainWithGemButton.setInteractive();
+        //     battleAgainWithGemButton.on('pointerdown', () => {
+        //         this.startNewBattleWithGem();
+        //     });
+        // }
         
-        // Store reference to battle again with gem button
-        this.battleAgainWithGemButton = battleAgainWithGemButton;
+        // // Store reference to battle again with gem button
+        // this.battleAgainWithGemButton = battleAgainWithGemButton;
 
-        // Back to menu button
-        const backButton = this.add.text(centerX, buttonY + 100, '← Back', {
-            fontSize: '16px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#34495e',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5);
-        backButton.setInteractive();
-        backButton.on('pointerdown', () => {
-            this.scene.start('CharacterSelectionScene');
-        });
+        // // PVP Battle button
+        // let pvpBattleAgainButtonText = '⚔️ PVP Battle';
+        // let pvpBattleAgainButtonColor = '#9b59b6';
+        // let pvpBattleAgainButtonEnabled = true;
+        
+        // if (battleAgainCooldownStatus.onCooldown) {
+        //     const timeRemaining = this.formatTimeRemaining(battleAgainCooldownStatus.timeRemaining);
+        //     pvpBattleAgainButtonText = `⏰ PVP Cooldown: ${timeRemaining}`;
+        //     pvpBattleAgainButtonColor = '#95a5a6';
+        //     pvpBattleAgainButtonEnabled = false;
+        // }
+        
+        // const pvpBattleAgainButton = this.add.text(centerX - 150, buttonY + 45, pvpBattleAgainButtonText, {
+        //     fontSize: '18px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: pvpBattleAgainButtonColor,
+        //     padding: { x: 15, y: 8 }
+        // }).setOrigin(0.5);
+
+        // if (pvpBattleAgainButtonEnabled) {
+        //     pvpBattleAgainButton.setInteractive();
+        //     pvpBattleAgainButton.on('pointerdown', () => {
+        //         this.startPVPBattle();
+        //     });
+        // }
+
+        // // PVP with Gem button
+        // const pvpBattleAgainWithGemButton = this.add.text(centerX + 150, buttonY + 45, '💎 PVP with Gem', {
+        //     fontSize: '16px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: this.battleGems >= 1 ? '#8e44ad' : '#95a5a6',
+        //     padding: { x: 12, y: 6 }
+        // }).setOrigin(0.5);
+
+        // if (this.battleGems >= 1) {
+        //     pvpBattleAgainWithGemButton.setInteractive();
+        //     pvpBattleAgainWithGemButton.on('pointerdown', () => {
+        //         this.startPVPBattleWithGem();
+        //     });
+        // }
+
+        // // Store references to PVP buttons for cooldown updates
+        // this.pvpBattleAgainButton = pvpBattleAgainButton;
+        // this.pvpBattleAgainWithGemButton = pvpBattleAgainWithGemButton;
+
+        // // Back to menu button
+        // const backButton = this.add.text(centerX, buttonY + 100, '← Back', {
+        //     fontSize: '16px',
+        //     fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        //     color: '#ffffff',
+        //     backgroundColor: '#34495e',
+        //     padding: { x: 15, y: 8 }
+        // }).setOrigin(0.5);
+        // backButton.setInteractive();
+        // backButton.on('pointerdown', () => {
+        //     this.scene.start('CharacterSelectionScene');
+        // });
+
+        this.showBattleUI(buttonY);
 
         // If content is too tall, adjust the modal height
         const totalContentHeight = buttonY + 100; // Add bottom padding

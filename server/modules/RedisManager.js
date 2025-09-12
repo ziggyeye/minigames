@@ -1220,6 +1220,234 @@ export class RedisManager {
   }
 
   /**
+   * Ensure there are at least 20 characters available for PVP battles
+   * Creates dummy characters if needed
+   * @param {number} minCharacters - Minimum number of characters needed (default: 20)
+   * @returns {Promise<number>} Number of characters available for PVP
+   */
+  async ensurePVPCharacters(minCharacters = 20) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, cannot check PVP characters');
+        return 0;
+      }
+
+      console.log(`🔍 Checking for at least ${minCharacters} PVP characters...`);
+
+      // Get all battle stats keys to count characters with battle experience
+      const battleStatsPattern = `${this.BATTLE_STATS_KEY}:*`;
+      const battleStatsKeys = await this.client.keys(battleStatsPattern);
+
+      const existingCharacterCount = battleStatsKeys.length;
+      console.log(`📊 Found ${existingCharacterCount} existing characters with battle experience`);
+
+      if (existingCharacterCount >= minCharacters) {
+        console.log(`✅ Sufficient PVP characters available (${existingCharacterCount}/${minCharacters})`);
+        return existingCharacterCount;
+      }
+
+      const charactersNeeded = minCharacters - existingCharacterCount;
+      console.log(`⚠️  Need ${charactersNeeded} more characters for PVP. Creating dummy characters...`);
+
+      // Create dummy characters
+      const dummyCharacters = this.generateDummyPVPCharacters(charactersNeeded);
+      
+      for (const dummyChar of dummyCharacters) {
+        await this.createDummyPVPCharacter(dummyChar);
+      }
+
+      console.log(`✅ Created ${charactersNeeded} dummy PVP characters`);
+      return minCharacters;
+
+    } catch (error) {
+      console.error('❌ Error ensuring PVP characters:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Generate dummy PVP characters
+   * @param {number} count - Number of dummy characters to generate
+   * @returns {Array} Array of dummy character objects
+   */
+  generateDummyPVPCharacters(count) {
+    const characterTemplates = [
+      {
+        name: "Thunder Strike",
+        description: "A lightning-fast warrior who wields twin electric blades. Can channel storms and strike with devastating speed.",
+        stats: { STR: 3, DEX: 4, CON: 2, INT: 1 }
+      },
+      {
+        name: "Crystal Guardian",
+        description: "A mystical defender who creates protective barriers of pure crystal. Masters defensive magic and healing arts.",
+        stats: { STR: 2, DEX: 1, CON: 4, INT: 3 }
+      },
+      {
+        name: "Shadow Assassin",
+        description: "A deadly rogue who moves unseen through darkness. Specializes in stealth attacks and poison techniques.",
+        stats: { STR: 2, DEX: 5, CON: 1, INT: 2 }
+      },
+      {
+        name: "Flame Warlock",
+        description: "A powerful mage who commands fire and destruction. Can summon infernal creatures and cast devastating spells.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Iron Berserker",
+        description: "A massive warrior who enters battle rage. Gains strength through combat and can shrug off most attacks.",
+        stats: { STR: 5, DEX: 1, CON: 3, INT: 1 }
+      },
+      {
+        name: "Wind Dancer",
+        description: "An agile fighter who moves like the wind. Uses acrobatic attacks and can create tornadoes of blades.",
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 }
+      },
+      {
+        name: "Void Mage",
+        description: "A mysterious spellcaster who manipulates dark energy. Can create portals and drain life force from enemies.",
+        stats: { STR: 1, DEX: 2, CON: 2, INT: 5 }
+      },
+      {
+        name: "Stone Crusher",
+        description: "A hulking fighter with rock-hard skin. Uses massive weapons and can cause earthquakes with his strikes.",
+        stats: { STR: 4, DEX: 1, CON: 4, INT: 1 }
+      },
+      {
+        name: "Ice Queen",
+        description: "A regal sorceress who commands winter's fury. Can freeze enemies solid and summon blizzards.",
+        stats: { STR: 1, DEX: 2, CON: 3, INT: 4 }
+      },
+      {
+        name: "Beast Tamer",
+        description: "A wild warrior who fights alongside animal companions. Can transform into beasts and command nature's creatures.",
+        stats: { STR: 3, DEX: 3, CON: 2, INT: 2 }
+      },
+      {
+        name: "Phoenix Knight",
+        description: "A noble warrior who rises from ashes. Wields a flaming sword and can resurrect from near death.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Storm Caller",
+        description: "A weather mage who controls the elements. Can summon lightning, rain, and hurricanes to devastate foes.",
+        stats: { STR: 2, DEX: 2, CON: 2, INT: 4 }
+      },
+      {
+        name: "Blood Reaper",
+        description: "A dark warrior who feeds on life force. Each kill makes him stronger and more dangerous.",
+        stats: { STR: 4, DEX: 2, CON: 2, INT: 2 }
+      },
+      {
+        name: "Golden Paladin",
+        description: "A holy warrior who fights for justice. Wields divine power and can heal allies while smiting evil.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 }
+      },
+      {
+        name: "Night Stalker",
+        description: "A vampire hunter who moves in shadows. Uses silver weapons and holy magic to destroy undead.",
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 }
+      },
+      {
+        name: "Arcane Scholar",
+        description: "A wise mage who studies ancient magic. Can cast complex spells and create magical constructs.",
+        stats: { STR: 1, DEX: 1, CON: 2, INT: 6 }
+      },
+      {
+        name: "War Machine",
+        description: "A mechanical warrior with built-in weapons. Can transform parts of his body into various armaments.",
+        stats: { STR: 4, DEX: 2, CON: 3, INT: 1 }
+      },
+      {
+        name: "Spirit Walker",
+        description: "A shaman who communes with spirits. Can summon ancestral warriors and cast powerful totem magic.",
+        stats: { STR: 2, DEX: 2, CON: 3, INT: 3 }
+      },
+      {
+        name: "Dragon Slayer",
+        description: "A legendary warrior who has slain dragons. Wields dragon-forged weapons and wears dragon scale armor.",
+        stats: { STR: 5, DEX: 2, CON: 2, INT: 1 }
+      },
+      {
+        name: "Time Weaver",
+        description: "A chronomancer who manipulates time itself. Can slow enemies, speed up allies, and glimpse the future.",
+        stats: { STR: 1, DEX: 3, CON: 2, INT: 4 }
+      }
+    ];
+
+    const dummyCharacters = [];
+    for (let i = 0; i < count; i++) {
+      const template = characterTemplates[i % characterTemplates.length];
+      const character = {
+        ...template,
+        name: `${template.name} ${Math.floor(Math.random() * 1000)}`, // Add random number for uniqueness
+        discordUserId: `dummy_user_${i + 1}` // Unique dummy user ID
+      };
+      dummyCharacters.push(character);
+    }
+
+    return dummyCharacters;
+  }
+
+  /**
+   * Create a dummy PVP character with battle stats
+   * @param {Object} character - Character object to create
+   */
+  async createDummyPVPCharacter(character) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, cannot create dummy character');
+        return;
+      }
+
+      // Generate a unique character ID
+      const characterId = `dummy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create character data
+      const characterData = {
+        characterId: characterId,
+        characterName: character.name,
+        description: character.description,
+        stats: character.stats,
+        discordUserId: character.discordUserId,
+        createdAt: new Date().toISOString(),
+        isDummy: true
+      };
+
+      // Save character to Redis
+      const characterKey = `${this.CHARACTERS_KEY}:${characterId}`;
+      await this.client.set(characterKey, JSON.stringify(characterData));
+
+      // Add character to user's character list
+      const userCharactersKey = `${this.USER_CHARACTERS_KEY}:${character.discordUserId}`;
+      await this.client.zAdd(userCharactersKey, {
+        score: Date.now(),
+        value: characterId
+      });
+
+      // Create initial battle stats (give them some battle experience)
+      const battleStatsKey = `${this.BATTLE_STATS_KEY}:${character.discordUserId}:${character.name}`;
+      const initialWins = Math.floor(Math.random() * 5) + 1; // 1-5 wins
+      const initialLosses = Math.floor(Math.random() * 3); // 0-2 losses
+      const totalBattles = initialWins + initialLosses;
+      const winRate = Math.round((initialWins / totalBattles) * 100);
+
+      await this.client.hSet(battleStatsKey, {
+        totalBattles: totalBattles.toString(),
+        wins: initialWins.toString(),
+        losses: initialLosses.toString(),
+        ties: '0',
+        winRate: winRate.toString(),
+        lastBattleDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() // Random date within last week
+      });
+
+      console.log(`✅ Created dummy character: ${character.name} (${winRate}% win rate)`);
+
+    } catch (error) {
+      console.error('❌ Error creating dummy character:', error);
+    }
+  }
+
+  /**
    * Disconnect from Redis
    */
   async disconnect() {

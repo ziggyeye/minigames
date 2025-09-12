@@ -88,6 +88,9 @@ class BreakoutServer {
     
     if (!redisInitialized) {
       console.log('⚠️  Redis initialization failed, continuing without Redis');
+    } else {
+      // Ensure we have enough PVP characters
+      await this.redisManager.ensurePVPCharacters(20);
     }
     
           // Initialize Matchmaking first
@@ -147,6 +150,11 @@ class BreakoutServer {
         console.log('  - GET /api/matchmaking/player/:name/matches - Get player matches');
         console.log('  - GET /api/matchmaking/player/:name/stats - Get player stats');
         console.log('  - DELETE /api/matchmaking/matches/:id - Cancel match');
+        console.log('⚔️ Battle AI endpoints:');
+        console.log('  - POST /api/battle/simulate - Simulate AI battle');
+        console.log('  - POST /api/pvp/battle/simulate - Simulate PVP battle');
+        console.log('  - GET /api/topCharacters - Get top AI battle characters');
+        console.log('  - GET /api/pvp/topCharacters - Get top PVP battle characters');
         console.log('  - GET /api/matchmaking/stats - Get matchmaking stats');
       });
       
