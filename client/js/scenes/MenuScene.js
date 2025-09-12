@@ -125,7 +125,9 @@ export default class MenuScene extends Phaser.Scene {
     createBackground() {
         // Create gradient background
         const graphics = this.add.graphics();
-        graphics.fillGradientStyle(0x667eea, 0x667eea, 0x764ba2, 0x764ba2, 1);
+
+        // fill gradient from left to right gray colors
+        graphics.fillGradientStyle(0x2c3e50, 0x2c3e50, 0x34495e, 0x34495e, 1);
         graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
         
         // Add some decorative elements
@@ -174,15 +176,15 @@ export default class MenuScene extends Phaser.Scene {
             'Create a character and battle against AI opponents!', 'battle-ai');
 
         // High Scores Card
-        this.createGameCard(centerX, 500, '🏆', 'High Scores', 
-            'View the top characters by win rate!', 'high-scores');
+        // this.createGameCard(centerX, 500, '🏆', 'High Scores', 
+        //     'View the top characters by win rate!', 'high-scores');
         
         // PVP High Scores Card
-        this.createGameCard(centerX, 700, '⚔️', 'PVP High Scores', 
+        this.createGameCard(centerX, 500, '⚔️', 'High Scores', 
             'View the top PVP champions!', 'pvp-high-scores');
         
         // Coming Soon Card
-        this.createGameCard(centerX, 900, '🚧', 'More Games Coming!', 
+        this.createGameCard(centerX, 700, '🚧', 'More Games Coming!', 
             'We\'re working on more exciting minigames!', 'coming-soon');
 
         // Add Discord join button and other links
@@ -273,12 +275,12 @@ export default class MenuScene extends Phaser.Scene {
         const discordY = this.cameras.main.height - 110;
 
         // Discord join button
-        const discordButton = this.add.text(centerX, discordY, '💬 Join Our Discord Server', {
+        const discordButton = this.add.text(centerX, discordY-10, '💬 Join Our Discord Server', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             backgroundColor: '#5865F2', // Discord's brand color
-            padding: { x: 20, y: 10 },
+            padding: { x: 20, y: 8 },
             stroke: '#000000',
             strokeThickness: 1
         }).setOrigin(0.5);

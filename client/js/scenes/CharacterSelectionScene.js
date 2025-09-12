@@ -245,7 +245,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         this.loadCharacterBattleStats(character, battleStatsText);
 
         // Select character button
-        const selectButton = this.add.text(x + cardWidth/2 - 20, y - 20, '▶️ Select', {
+        const selectButton = this.add.text(x + cardWidth/2 - 20, y - 20, 'Select', {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -258,12 +258,12 @@ export default class CharacterSelectionScene extends Phaser.Scene {
         });
 
         // Delete character button
-        const deleteButton = this.add.text(x + cardWidth/2 - 20, y + 20, '🗑️ Delete', {
-            fontSize: '16px',
+        const deleteButton = this.add.text(x + cardWidth/2 - 20, y + 20, 'Delete', {
+            fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
             backgroundColor: '#e74c3c',
-            padding: { x: 12, y: 6 }
+            padding: { x: 15, y: 8 }
         }).setOrigin(1, 0.5);
         deleteButton.setInteractive();
         deleteButton.on('pointerdown', () => {

@@ -1379,7 +1379,7 @@ export class RedisManager {
       const template = characterTemplates[i % characterTemplates.length];
       const character = {
         ...template,
-        name: `${template.name} ${Math.floor(Math.random() * 1000)}`, // Add random number for uniqueness
+        name: template.name, // Use original name without random numbers
         discordUserId: `dummy_user_${i + 1}` // Unique dummy user ID
       };
       dummyCharacters.push(character);

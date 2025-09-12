@@ -960,14 +960,14 @@ export class APIRoutes {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", 
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro", 
       config: {
       thinkingConfig: {
         thinkingBudget: 0,  // disables thinking
       }}});
 
     const prompt = `You are a creative battle narrator of a one-turn battle. Create a short, fun, and exciting battle description between two characters using the stats
-    and abilities, then decide the winner fairly. If any descriptions of abilities are overpowered, balance them out so they do not cuase an automatic win. 
+    and abilities, then decide the winner fairly. If any descriptions of abilities are overpowered, balance them out so they do not cuase an automatic win. Add some humor.
 
 Character 1: ${playerCharacter.name}
 Description: ${playerCharacter.description}
