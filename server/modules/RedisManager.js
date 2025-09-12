@@ -15,6 +15,7 @@ export class RedisManager {
     this.BATTLE_STATS_KEY = 'minigames:battle_stats';
     this.PVP_BATTLE_STATS_KEY = 'minigames:pvp_battle_stats';
     this.PVP_MATCHMAKING_KEY = 'minigames:pvp_matchmaking';
+    this.PROCESSED_PURCHASES_KEY = 'minigames:processed_purchases';
   }
 
   /**
@@ -1444,6 +1445,58 @@ export class RedisManager {
 
     } catch (error) {
       console.error('❌ Error creating dummy character:', error);
+    }
+  }
+
+  /**
+   * Get processed purchase by token
+   * @param {string} purchaseToken - Purchase token
+   * @returns {Promise<Object|null>} Processed purchase data or null
+   */
+  async getProcessedPurchase(purchaseToken) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, cannot get processed purchase');
+        return null;
+      }
+
+      const purchaseKey = `${this.PROCESSED_PURCHASES_KEY}:${purchaseToken}`;
+      const purchaseData = await this.client.get(purchaseKey);
+      
+      if (purchaseData) {
+        return JSON.parse(purchaseData);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting processed purchase:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Mark purchase as processed to prevent duplicate rewards
+   * @param {string} purchaseToken - Purchase token
+   * @param {Object} purchaseData - Purchase data to store
+   * @returns {Promise<boolean>} Success status
+   */
+  async markPurchaseAsProcessed(purchaseToken, purchaseData) {
+    try {
+      if (!this.isReady()) {
+        console.log('⚠️  Redis not ready, cannot mark purchase as processed');
+        return false;
+      }
+
+      const purchaseKey = `${this.PROCESSED_PURCHASES_KEY}:${purchaseToken}`;
+      
+      // Store purchase data with 30-day expiration (purchases should be processed quickly)
+      await this.client.setEx(purchaseKey, 30 * 24 * 60 * 60, JSON.stringify(purchaseData));
+      
+      console.log(`✅ Marked purchase as processed: ${purchaseToken}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Error marking purchase as processed:', error);
+      return false;
     }
   }
 

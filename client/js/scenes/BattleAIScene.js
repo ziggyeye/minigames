@@ -224,36 +224,89 @@ export default class BattleAIScene extends Phaser.Scene {
     async addBattleGems() {
         try {
             const discordUserId = this.getDiscordUserId();
-            console.log('💎 Adding battle gems for:', discordUserId);
+            console.log('💎 Starting Discord consumable purchase for:', discordUserId);
 
-            const response = await fetch(API_ENDPOINTS.addBattleGems, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    discordUserId: discordUserId,
-                    amount: 5
-                })
+            // Check if Discord SDK is available
+            if (!window.DiscordSDK) {
+                this.showError('Discord SDK not available. Please run this in Discord.');
+                return;
+            }
+
+            // Show loading message
+            this.showMessage('🛒 Opening Discord purchase dialog...');
+
+            // Start Discord consumable purchase flow
+            const purchaseResult = await window.DiscordSDK.commands.startPurchase({
+                sku: '10_gems' // The SKU ID for 10 gems
             });
 
-            const result = await response.json();
-            
-            if (result.success) {
-                this.battleGems = result.battleGems;
-                console.log('✅ Battle gems added:', result.message);
-                this.showMessage(`✅ ${result.message}`);
+            console.log('💳 Discord purchase result:', purchaseResult);
+
+            if (purchaseResult.code === 0) {
+                // Purchase was successful, now process it on our server
+                this.showMessage('✅ Purchase successful! Processing...');
+
+                const response = await fetch(API_ENDPOINTS.addBattleGems, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        discordUserId: discordUserId,
+                        skuId: '10_gems',
+                        purchaseToken: purchaseResult.data.purchase_token
+                    })
+                });
+
+                const result = await response.json();
                 
-                // Refresh the character data UI to show updated gems
-                this.showCharacterData();
+                if (result.success) {
+                    this.battleGems = result.battleGems;
+                    console.log('✅ Battle gems purchased:', result.message);
+                    this.showMessage(`✅ ${result.message}`);
+                    
+                    // Refresh the character data UI to show updated gems
+                    this.showCharacterData();
+                } else {
+                    console.log('⚠️ Battle gems purchase processing failed:', result.message);
+                    this.showError(`⚠️ ${result.message}`);
+                }
             } else {
-                console.log('⚠️ Battle gems add failed:', result.message);
-                this.showError(`⚠️ ${result.message}`);
+                // Purchase was cancelled or failed
+                const errorMessage = this.getDiscordPurchaseErrorMessage(purchaseResult.code);
+                console.log('❌ Discord purchase failed:', errorMessage);
+                this.showError(`❌ Purchase failed: ${errorMessage}`);
             }
         } catch (error) {
-            console.error('❌ Error adding battle gems:', error);
-            this.showError('Failed to add battle gems. Please try again.');
+            console.error('❌ Error in battle gems purchase flow:', error);
+            if (error.message && error.message.includes('startPurchase')) {
+                this.showError('❌ Discord purchase system not available. Please try again later.');
+            } else {
+                this.showError('❌ Failed to purchase battle gems. Please try again.');
+            }
         }
+    }
+
+    /**
+     * Get user-friendly error message for Discord purchase codes
+     * @param {number} code - Discord purchase result code
+     * @returns {string} Error message
+     */
+    getDiscordPurchaseErrorMessage(code) {
+        const errorMessages = {
+            1: 'Purchase was cancelled by user',
+            2: 'Purchase failed due to network error',
+            3: 'Purchase failed due to invalid SKU',
+            4: 'Purchase failed due to insufficient funds',
+            5: 'Purchase failed due to region restrictions',
+            6: 'Purchase failed due to age restrictions',
+            7: 'Purchase failed due to payment method issues',
+            8: 'Purchase failed due to system error',
+            9: 'Purchase failed due to rate limiting',
+            10: 'Purchase failed due to invalid user'
+        };
+        
+        return errorMessages[code] || `Unknown error (code: ${code})`;
     }
 
     startCooldownTimer() {
@@ -594,8 +647,8 @@ export default class BattleAIScene extends Phaser.Scene {
              padding: { x: 10, y: 5 }
          });
  
-         // Add battle gems button (disabled if at max)
-         const addGemsButton = this.add.text(centerX, gemsY+50, '➕ Add Gems', {
+        // Add battle gems button (disabled if at max)
+        const addGemsButton = this.add.text(centerX, gemsY+50, '💎 Buy 10 Gems', {
              fontSize: '14px',
              fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
              color: '#ffffff',

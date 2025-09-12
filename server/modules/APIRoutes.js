@@ -1546,45 +1546,87 @@ Format your result as a single paragraph.`;
   }
 
   /**
-   * Handle adding battle gems to a user
+   * Handle Discord consumable SKU purchase and award battle gems
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
   async handleAddBattleGems(req, res) {
     try {
-      const { discordUserId, amount = 5 } = req.body;
+      const { discordUserId, skuId, purchaseToken } = req.body;
       
       if (!discordUserId) {
         return this.sendErrorResponse(res, 400, 'Missing required field: discordUserId');
       }
 
-      console.log(`💎 Adding ${amount} battle gems to user: ${discordUserId}`);
+      if (!skuId) {
+        return this.sendErrorResponse(res, 400, 'Missing required field: skuId');
+      }
 
-      const result = await this.redisManager.addBattleGems(discordUserId.trim(), amount);
+      if (!purchaseToken) {
+        return this.sendErrorResponse(res, 400, 'Missing required field: purchaseToken');
+      }
+
+      console.log(`💎 Processing Discord consumable purchase for user: ${discordUserId}, SKU: ${skuId}`);
+
+      // Validate the purchase with Discord
+      const purchaseValidation = await this.validateDiscordPurchase(discordUserId, skuId, purchaseToken);
+      
+      if (!purchaseValidation.success) {
+        return this.sendErrorResponse(res, 400, 'Invalid purchase', purchaseValidation.error);
+      }
+
+      // Check if this purchase has already been processed (prevent duplicate rewards)
+      const existingPurchase = await this.redisManager.getProcessedPurchase(purchaseToken);
+      if (existingPurchase) {
+        return this.sendErrorResponse(res, 409, 'Purchase already processed', {
+          battleGems: existingPurchase.battleGems,
+          processedAt: existingPurchase.processedAt
+        });
+      }
+
+      // Determine gem amount based on SKU
+      const gemAmount = this.getGemAmountFromSku(skuId);
+      if (gemAmount === 0) {
+        return this.sendErrorResponse(res, 400, 'Invalid SKU ID', 'Unknown consumable SKU');
+      }
+
+      // Award battle gems to user
+      const result = await this.redisManager.addBattleGems(discordUserId.trim(), gemAmount);
       
       if (result.success) {
+        // Mark purchase as processed to prevent duplicate rewards
+        await this.redisManager.markPurchaseAsProcessed(purchaseToken, {
+          discordUserId: discordUserId,
+          skuId: skuId,
+          gemAmount: gemAmount,
+          battleGems: result.newTotal,
+          processedAt: new Date().toISOString()
+        });
+
         // Post to Discord when gems are successfully added
-        // try {
-        //   if (this.discordManager && this.discordManager.isBotReady()) {
-        //     console.log(`📤 Posting battle gems earned to Discord for user ${discordUserId}`);
-        //     const discordResult = await this.discordManager.postBattleGemsEarnedToDiscord(discordUserId, amount, result.newTotal);
-        //     if (discordResult.success) {
-        //       console.log('✅ Battle gems earned posted to Discord successfully');
-        //     } else {
-        //       console.warn('⚠️ Failed to post battle gems earned to Discord:', discordResult.error);
-        //     }
-        //   } else {
-        //     console.log('ℹ️ Discord bot not available, skipping battle gems earned post');
-        //   }
-        // } catch (discordError) {
-        //   console.warn('⚠️ Error posting battle gems earned to Discord (non-critical):', discordError.message);
-        // }
+        try {
+          if (this.discordManager && this.discordManager.isBotReady()) {
+            console.log(`📤 Posting battle gems purchase to Discord for user ${discordUserId}`);
+            const discordResult = await this.discordManager.postBattleGemsPurchasedToDiscord(discordUserId, gemAmount, result.newTotal, skuId);
+            if (discordResult.success) {
+              console.log('✅ Battle gems purchase posted to Discord successfully');
+            } else {
+              console.warn('⚠️ Failed to post battle gems purchase to Discord:', discordResult.error);
+            }
+          } else {
+            console.log('ℹ️ Discord bot not available, skipping battle gems purchase post');
+          }
+        } catch (discordError) {
+          console.warn('⚠️ Error posting battle gems purchase to Discord (non-critical):', discordError.message);
+        }
 
         res.json({
           success: true,
-          message: result.message,
+          message: `Successfully purchased ${gemAmount} battle gems!`,
           battleGems: result.newTotal,
-          added: amount
+          added: gemAmount,
+          skuId: skuId,
+          purchaseToken: purchaseToken
         });
       } else {
         res.json({
@@ -1595,9 +1637,62 @@ Format your result as a single paragraph.`;
       }
 
     } catch (error) {
-      console.error('❌ Error adding battle gems:', error);
+      console.error('❌ Error processing battle gems purchase:', error);
       this.sendErrorResponse(res, 500, 'Internal server error', error.message);
     }
+  }
+
+  /**
+   * Validate Discord consumable purchase
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} skuId - SKU ID
+   * @param {string} purchaseToken - Purchase token from Discord
+   * @returns {Promise<Object>} Validation result
+   */
+  async validateDiscordPurchase(discordUserId, skuId, purchaseToken) {
+    try {
+      // In a real implementation, you would validate the purchase with Discord's API
+      // For now, we'll implement basic validation
+      
+      if (!discordUserId || !skuId || !purchaseToken) {
+        return { success: false, error: 'Missing required purchase data' };
+      }
+
+      // Validate SKU ID format (should be a valid Discord SKU)
+      if (!skuId.startsWith('sku_') || skuId.length < 10) {
+        return { success: false, error: 'Invalid SKU ID format' };
+      }
+
+      // Validate purchase token format
+      if (purchaseToken.length < 20) {
+        return { success: false, error: 'Invalid purchase token format' };
+      }
+
+      // TODO: Implement actual Discord API validation
+      // This would involve calling Discord's monetization API to verify the purchase
+      // For now, we'll accept valid-looking tokens
+      
+      console.log(`✅ Purchase validation passed for user ${discordUserId}, SKU ${skuId}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Error validating Discord purchase:', error);
+      return { success: false, error: 'Purchase validation failed' };
+    }
+  }
+
+  /**
+   * Get gem amount from SKU ID
+   * @param {string} skuId - SKU ID
+   * @returns {number} Gem amount
+   */
+  getGemAmountFromSku(skuId) {
+    // Map SKU IDs to gem amounts
+    const skuToGems = {
+      '10_gems': 10,      // 10 gems pack
+    };
+
+    return skuToGems[skuId] || 0;
   }
 
   /**
