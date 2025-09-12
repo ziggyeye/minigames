@@ -47,6 +47,11 @@ export class DiscordManager {
     if (!this.isDiscord) {
       console.log("Running in local mode — Discord APIs disabled.");
       this.currentUser = { id: '1234', username: 'TestUser2' };
+      this.discordSdk = null;
+      
+      // Clear global DiscordSDK when not in Discord environment
+      window.DiscordSDK = null;
+      
       this.isInitialized = true;
       return this.currentUser;
     }
@@ -72,15 +77,28 @@ export class DiscordManager {
         console.warn("No Discord client ID found, using test mode");
         console.log("Available env vars:", Object.keys(process.env).filter(key => key.includes('DISCORD')));
         this.currentUser = { id: 'no_client_id', username: 'TestUser' };
+        this.discordSdk = null;
+        
+        // Clear global DiscordSDK when no client ID
+        window.DiscordSDK = null;
+        
         return;
       }
       
       this.discordSdk = new DiscordSDK(clientId);
+      
+      // Set global DiscordSDK for purchase flow access
+      window.DiscordSDK = this.discordSdk;
+      
       console.log("Discord SDK initialized with client ID");
     } catch (error) {
       console.error("Failed to initialize Discord SDK:", error);
       this.currentUser = { id: 'discord_error', username: 'TestUser' };
       this.discordSdk = null;
+      
+      // Clear global DiscordSDK if initialization failed
+      window.DiscordSDK = null;
+      
       return;
     }
 

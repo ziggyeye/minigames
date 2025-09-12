@@ -118,7 +118,7 @@ class BreakoutServer {
   setupRoutes() {
     console.log('🔧 Setting up API routes...');
     
-    this.apiRoutes = new APIRoutes(this.redisManager, this.discordManager, this.matchmakingManager);
+    this.apiRoutes = new APIRoutes(this.redisManager, this.discordManager, this.matchmakingManager, this.config);
     this.apiRoutes.setupRoutes(this.app);
     
     console.log('✅ API routes setup complete');

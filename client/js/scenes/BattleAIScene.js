@@ -237,7 +237,7 @@ export default class BattleAIScene extends Phaser.Scene {
 
             // Start Discord consumable purchase flow
             const purchaseResult = await window.DiscordSDK.commands.startPurchase({
-                sku: '10_gems' // The SKU ID for 10 gems
+                sku_id: '1415896807908835438' // The SKU ID for 10 gems
             });
 
             console.log('💳 Discord purchase result:', purchaseResult);

@@ -15,7 +15,8 @@ const config = {
       topCharactersEndpoint: '/api/topCharacters',
       pvpBattleSimulationEndpoint: '/api/pvp/battle/simulate',
       characterPVPBattleStatsEndpoint: '/api/pvp/battle/stats/:discordUserId/:characterName',
-      topPVPCharactersEndpoint: '/api/pvp/topCharacters'
+      topPVPCharactersEndpoint: '/api/pvp/topCharacters',
+      availableSKUsEndpoint: '/api/skus'
     },
     production: {
       serverUrl: '/server',
@@ -32,7 +33,8 @@ const config = {
       topCharactersEndpoint: '/api/topCharacters',
       pvpBattleSimulationEndpoint: '/api/pvp/battle/simulate',
       characterPVPBattleStatsEndpoint: '/api/pvp/battle/stats/:discordUserId/:characterName',
-      topPVPCharactersEndpoint: '/api/pvp/topCharacters'
+      topPVPCharactersEndpoint: '/api/pvp/topCharacters',
+      availableSKUsEndpoint: '/api/skus'
     }
   };
 
@@ -61,7 +63,8 @@ const config = {
     topCharacters: getApiUrl(currentConfig.topCharactersEndpoint),
     pvpBattleSimulation: getApiUrl(currentConfig.pvpBattleSimulationEndpoint),
     characterPVPBattleStats: getApiUrl(currentConfig.characterPVPBattleStatsEndpoint),
-    topPVPCharacters: getApiUrl(currentConfig.topPVPCharactersEndpoint)
+    topPVPCharacters: getApiUrl(currentConfig.topPVPCharactersEndpoint),
+    availableSKUs: getApiUrl(currentConfig.availableSKUsEndpoint)
   };
   
   export default currentConfig;

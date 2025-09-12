@@ -3,10 +3,11 @@
  * Provides centralized API functionality with consistent response formats
  */
 export class APIRoutes {
-  constructor(redisManager, discordManager, matchmakingManager) {
+  constructor(redisManager, discordManager, matchmakingManager, config) {
     this.redisManager = redisManager;
     this.discordManager = discordManager;
     this.matchmakingManager = matchmakingManager;
+    this.config = config;
   }
 
   /**
@@ -66,6 +67,9 @@ export class APIRoutes {
     
     // Top PVP characters by win rate endpoint
     app.get('/api/pvp/topCharacters', this.handleGetTopPVPCharacters.bind(this));
+    
+    // Get available SKUs endpoint
+    app.get('/api/skus', this.handleGetAvailableSKUs.bind(this));
 
   }
 
@@ -1594,6 +1598,21 @@ Format your result as a single paragraph.`;
       const result = await this.redisManager.addBattleGems(discordUserId.trim(), gemAmount);
       
       if (result.success) {
+        // Consume the entitlement to prevent reuse
+        if (purchaseValidation.entitlement) {
+          const consumeResult = await this.consumeDiscordEntitlement(
+            this.config.getDiscordConfig().clientId,
+            this.config.getDiscordConfig().token,
+            purchaseValidation.entitlement.id
+          );
+          
+          if (!consumeResult.success) {
+            console.warn('⚠️ Failed to consume entitlement, but gems were awarded:', consumeResult.error);
+          } else {
+            console.log('✅ Entitlement consumed successfully');
+          }
+        }
+
         // Mark purchase as processed to prevent duplicate rewards
         await this.redisManager.markPurchaseAsProcessed(purchaseToken, {
           discordUserId: discordUserId,
@@ -1651,15 +1670,12 @@ Format your result as a single paragraph.`;
    */
   async validateDiscordPurchase(discordUserId, skuId, purchaseToken) {
     try {
-      // In a real implementation, you would validate the purchase with Discord's API
-      // For now, we'll implement basic validation
-      
       if (!discordUserId || !skuId || !purchaseToken) {
         return { success: false, error: 'Missing required purchase data' };
       }
 
       // Validate SKU ID format (should be a valid Discord SKU)
-      if (!skuId.startsWith('sku_') || skuId.length < 10) {
+      if (!skuId.startsWith('sku_') && !skuId.match(/^\d+_gems$/)) {
         return { success: false, error: 'Invalid SKU ID format' };
       }
 
@@ -1668,16 +1684,240 @@ Format your result as a single paragraph.`;
         return { success: false, error: 'Invalid purchase token format' };
       }
 
-      // TODO: Implement actual Discord API validation
-      // This would involve calling Discord's monetization API to verify the purchase
-      // For now, we'll accept valid-looking tokens
-      
-      console.log(`✅ Purchase validation passed for user ${discordUserId}, SKU ${skuId}`);
-      return { success: true };
+      // Get Discord configuration
+      const discordConfig = this.config.getDiscordConfig();
+      if (!discordConfig.token || !discordConfig.clientId) {
+        console.warn('⚠️ Discord configuration missing, skipping API validation');
+        return { success: true }; // Allow in development
+      }
+
+      // Validate purchase with Discord's monetization API
+      const validationResult = await this.validateWithDiscordAPI(
+        discordConfig.clientId,
+        discordConfig.token,
+        skuId,
+        purchaseToken,
+        discordUserId
+      );
+
+      if (validationResult.success) {
+        console.log(`✅ Discord API validation passed for user ${discordUserId}, SKU ${skuId}`);
+        return { success: true, entitlement: validationResult.entitlement };
+      } else {
+        console.log(`❌ Discord API validation failed for user ${discordUserId}: ${validationResult.error}`);
+        return { success: false, error: validationResult.error };
+      }
 
     } catch (error) {
       console.error('❌ Error validating Discord purchase:', error);
       return { success: false, error: 'Purchase validation failed' };
+    }
+  }
+
+  /**
+   * Validate purchase with Discord's monetization API
+   * @param {string} applicationId - Discord application ID
+   * @param {string} botToken - Discord bot token
+   * @param {string} skuId - SKU ID
+   * @param {string} purchaseToken - Purchase token
+   * @param {string} userId - Discord user ID
+   * @returns {Promise<Object>} Validation result
+   */
+  async validateWithDiscordAPI(applicationId, botToken, skuId, purchaseToken, userId) {
+    try {
+      // First, get the entitlement using the purchase token
+      const entitlementResponse = await fetch(
+        `https://discord.com/api/v10/applications/${applicationId}/entitlements?purchase_token=${purchaseToken}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!entitlementResponse.ok) {
+        const errorText = await entitlementResponse.text();
+        console.error(`❌ Discord API error: ${entitlementResponse.status} - ${errorText}`);
+        return { 
+          success: false, 
+          error: `Discord API error: ${entitlementResponse.status}` 
+        };
+      }
+
+      const entitlements = await entitlementResponse.json();
+      
+      if (!entitlements || entitlements.length === 0) {
+        return { 
+          success: false, 
+          error: 'No entitlements found for this purchase token' 
+        };
+      }
+
+      // Find the entitlement that matches our SKU and user
+      const matchingEntitlement = entitlements.find(entitlement => 
+        entitlement.sku_id === skuId && 
+        entitlement.user_id === userId &&
+        entitlement.type === 8 // Type 8 is consumable
+      );
+
+      if (!matchingEntitlement) {
+        return { 
+          success: false, 
+          error: 'No matching consumable entitlement found' 
+        };
+      }
+
+      // Check if the entitlement is still valid (not consumed)
+      if (matchingEntitlement.consumed) {
+        return { 
+          success: false, 
+          error: 'This consumable has already been consumed' 
+        };
+      }
+
+      // Check if the entitlement is active
+      if (matchingEntitlement.ends_at && new Date(matchingEntitlement.ends_at) < new Date()) {
+        return { 
+          success: false, 
+          error: 'This entitlement has expired' 
+        };
+      }
+
+      console.log(`✅ Found valid entitlement: ${matchingEntitlement.id}`);
+      return { 
+        success: true, 
+        entitlement: matchingEntitlement 
+      };
+
+    } catch (error) {
+      console.error('❌ Error calling Discord API:', error);
+      return { 
+        success: false, 
+        error: 'Failed to validate with Discord API' 
+      };
+    }
+  }
+
+  /**
+   * Consume a Discord entitlement
+   * @param {string} applicationId - Discord application ID
+   * @param {string} botToken - Discord bot token
+   * @param {string} entitlementId - Entitlement ID to consume
+   * @returns {Promise<Object>} Consume result
+   */
+  async consumeDiscordEntitlement(applicationId, botToken, entitlementId) {
+    try {
+      const consumeResponse = await fetch(
+        `https://discord.com/api/v10/applications/${applicationId}/entitlements/${entitlementId}/consume`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!consumeResponse.ok) {
+        const errorText = await consumeResponse.text();
+        console.error(`❌ Discord consume API error: ${consumeResponse.status} - ${errorText}`);
+        return { 
+          success: false, 
+          error: `Discord API error: ${consumeResponse.status}` 
+        };
+      }
+
+      const result = await consumeResponse.json();
+      console.log(`✅ Entitlement ${entitlementId} consumed successfully`);
+      return { success: true, result: result };
+
+    } catch (error) {
+      console.error('❌ Error consuming Discord entitlement:', error);
+      return { 
+        success: false, 
+        error: 'Failed to consume entitlement' 
+      };
+    }
+  }
+
+  /**
+   * Handle getting available SKUs from Discord
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async handleGetAvailableSKUs(req, res) {
+    try {
+      console.log('🔍 Fetching available SKUs from Discord...');
+
+      const discordConfig = this.config.getDiscordConfig();
+      if (!discordConfig.token || !discordConfig.clientId) {
+        return this.sendErrorResponse(res, 500, 'Discord configuration missing', 'Cannot fetch SKUs without Discord credentials');
+      }
+
+      const skus = await this.fetchDiscordSKUs(discordConfig.clientId, discordConfig.token);
+      
+      if (skus.success) {
+        res.json({
+          success: true,
+          skus: skus.data,
+          count: skus.data.length
+        });
+      } else {
+        this.sendErrorResponse(res, 500, 'Failed to fetch SKUs', skus.error);
+      }
+
+    } catch (error) {
+      console.error('❌ Error fetching available SKUs:', error);
+      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+    }
+  }
+
+  /**
+   * Fetch SKUs from Discord API
+   * @param {string} applicationId - Discord application ID
+   * @param {string} botToken - Discord bot token
+   * @returns {Promise<Object>} SKUs result
+   */
+  async fetchDiscordSKUs(applicationId, botToken) {
+    try {
+      const skusResponse = await fetch(
+        `https://discord.com/api/v10/applications/${applicationId}/skus`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!skusResponse.ok) {
+        const errorText = await skusResponse.text();
+        console.error(`❌ Discord SKUs API error: ${skusResponse.status} - ${errorText}`);
+        return { 
+          success: false, 
+          error: `Discord API error: ${skusResponse.status}` 
+        };
+      }
+
+      const skus = await skusResponse.json();
+      console.log(`✅ Fetched ${skus.length} SKUs from Discord`);
+      
+      // Log available SKUs for debugging
+      skus.forEach(sku => {
+        console.log(`📦 SKU: ${sku.id} - ${sku.name} (Type: ${sku.type}, Price: ${sku.price?.amount || 'N/A'})`);
+      });
+
+      return { success: true, data: skus };
+
+    } catch (error) {
+      console.error('❌ Error calling Discord SKUs API:', error);
+      return { 
+        success: false, 
+        error: 'Failed to fetch SKUs from Discord API' 
+      };
     }
   }
 
