@@ -548,10 +548,10 @@ export default class BattleAIScene extends Phaser.Scene {
         // Create background graphics
         const buttonBg = this.add.graphics();
         buttonBg.fillStyle(color, 1);
-        buttonBg.fillRoundedRect(0, 0, w, h, 12); // draw rounded background
+        buttonBg.fillRoundedRect(-w/2, -h/2, w, h, 12); // draw rounded background
 
         // Add text on top
-        let buttonText = this.add.text(w/2, h/2, text, {
+        let buttonText = this.add.text(0, 0, text, {
             fontSize: '18px',
             fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
             color: '#ffffff',
@@ -560,11 +560,14 @@ export default class BattleAIScene extends Phaser.Scene {
         buttonText.setOrigin(0.5);
 
         // Group them
-        const button = this.add.container(x-w/2, y-h/2, [buttonBg, buttonText]);
+        const button = this.add.container(x, y, [buttonBg, buttonText]);
 
         // Make container interactive with a rectangle hit area
         button.setSize(w, h);
         button.setInteractive();
+
+       // button.setInteractive(new Phaser.Geom.Rectangle(-w/2, -h/2, w, h), Phaser.Geom.Rectangle.Contains);
+       // this.add.graphics().lineStyle(2, 0xff0000).strokeRect(button.x, button.y, w, h);
 
         return button;
     }
