@@ -2029,14 +2029,14 @@ Format your result as a single paragraph.`;
           }
           
           console.log(`💎 User ${discordUserId} spent 1 battle gem to bypass cooldown`);
-        } else {
-          const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
-          return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
-            cooldownExpiry: cooldownStatus.cooldownExpiry,
-            timeRemaining: cooldownStatus.timeRemaining
-          });
+        // } else {
+        //   const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+        //   return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
+        //     cooldownExpiry: cooldownStatus.cooldownExpiry,
+        //     timeRemaining: cooldownStatus.timeRemaining
+        //   });
+        // }
         }
-     // }
 
       // Validate required fields
       if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
