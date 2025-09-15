@@ -1572,12 +1572,13 @@ Format your result as a single paragraph.`;
 
       console.log(`💎 Processing Discord consumable purchase for user: ${discordUserId}, SKU: ${skuId}`);
 
+      // TODO:XXX VERIFY ENTITLEMENTS
       // Validate the purchase with Discord
-      const purchaseValidation = await this.validateDiscordPurchase(discordUserId, skuId, purchaseToken);
+      //const purchaseValidation = await this.validateDiscordPurchase(discordUserId, skuId, purchaseToken);
       
-      if (!purchaseValidation.success) {
-        return this.sendErrorResponse(res, 400, 'Invalid purchase', purchaseValidation.error);
-      }
+      // if (!purchaseValidation.success) {
+      //   return this.sendErrorResponse(res, 400, 'Invalid purchase', purchaseValidation.error);
+      // }
 
       // Check if this purchase has already been processed (prevent duplicate rewards)
       const existingPurchase = await this.redisManager.getProcessedPurchase(purchaseToken);
@@ -1599,11 +1600,11 @@ Format your result as a single paragraph.`;
       
       if (result.success) {
         // Consume the entitlement to prevent reuse
-        if (purchaseValidation.entitlement) {
+       // if (purchaseValidation.entitlement) {
           const consumeResult = await this.consumeDiscordEntitlement(
             this.config.getDiscordConfig().clientId,
             this.config.getDiscordConfig().token,
-            purchaseValidation.entitlement.id
+            purchaseToken
           );
           
           if (!consumeResult.success) {
@@ -1611,7 +1612,7 @@ Format your result as a single paragraph.`;
           } else {
             console.log('✅ Entitlement consumed successfully');
           }
-        }
+     //   }
 
         // Mark purchase as processed to prevent duplicate rewards
         await this.redisManager.markPurchaseAsProcessed(purchaseToken, {
@@ -1623,21 +1624,21 @@ Format your result as a single paragraph.`;
         });
 
         // Post to Discord when gems are successfully added
-        try {
-          if (this.discordManager && this.discordManager.isBotReady()) {
-            console.log(`📤 Posting battle gems purchase to Discord for user ${discordUserId}`);
-            const discordResult = await this.discordManager.postBattleGemsPurchasedToDiscord(discordUserId, gemAmount, result.newTotal, skuId);
-            if (discordResult.success) {
-              console.log('✅ Battle gems purchase posted to Discord successfully');
-            } else {
-              console.warn('⚠️ Failed to post battle gems purchase to Discord:', discordResult.error);
-            }
-          } else {
-            console.log('ℹ️ Discord bot not available, skipping battle gems purchase post');
-          }
-        } catch (discordError) {
-          console.warn('⚠️ Error posting battle gems purchase to Discord (non-critical):', discordError.message);
-        }
+        // try {
+        //   if (this.discordManager && this.discordManager.isBotReady()) {
+        //     console.log(`📤 Posting battle gems purchase to Discord for user ${discordUserId}`);
+        //     const discordResult = await this.discordManager.postBattleGemsPurchasedToDiscord(discordUserId, gemAmount, result.newTotal, skuId);
+        //     if (discordResult.success) {
+        //       console.log('✅ Battle gems purchase posted to Discord successfully');
+        //     } else {
+        //       console.warn('⚠️ Failed to post battle gems purchase to Discord:', discordResult.error);
+        //     }
+        //   } else {
+        //     console.log('ℹ️ Discord bot not available, skipping battle gems purchase post');
+        //   }
+        // } catch (discordError) {
+        //   console.warn('⚠️ Error posting battle gems purchase to Discord (non-critical):', discordError.message);
+        // }
 
         res.json({
           success: true,
@@ -2007,8 +2008,8 @@ Format your result as a single paragraph.`;
       
       // Check battle cooldown first
       const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
-      
-      if (cooldownStatus.onCooldown) {
+      console.log("use battle gem: ", useBattleGem);
+      //if (cooldownStatus.onCooldown) {
         if (useBattleGem) {
           // Check if user has enough battle gems
           const currentGems = await this.redisManager.getBattleGems(discordUserId.trim());
@@ -2035,7 +2036,7 @@ Format your result as a single paragraph.`;
             timeRemaining: cooldownStatus.timeRemaining
           });
         }
-      }
+     // }
 
       // Validate required fields
       if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {

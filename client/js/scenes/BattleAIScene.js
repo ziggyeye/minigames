@@ -232,19 +232,36 @@ export default class BattleAIScene extends Phaser.Scene {
                 return;
             }
 
+            const entitlements = await window.DiscordSDK.commands.getEntitlements();
+            console.log('💎 Entitlements:', entitlements.entitlements);
+            let bought = false;
+
+            let purchaseResult = null;
+            if (entitlements.entitlements.length > 0 && !entitlements.entitlements[0].consumed) {
+                console.log('💎 Entitlement found and not consumed');
+                bought = true;
+                purchaseResult = entitlements.entitlements;
+            }
+
+            const skuName = '10_gems';
+            if (!bought) {
             // Show loading message
-            this.showMessage('🛒 Opening Discord purchase dialog...');
+                console.log('🛒 Opening Discord purchase dialog...');
 
-            // Start Discord consumable purchase flow
-            const purchaseResult = await window.DiscordSDK.commands.startPurchase({
-                sku_id: '1415896807908835438' // The SKU ID for 10 gems
-            });
+                const skuId = '1415896807908835438'
+                
 
-            console.log('💳 Discord purchase result:', purchaseResult);
+                // Start Discord consumable purchase flow
+                purchaseResult = await window.DiscordSDK.commands.startPurchase({
+                    sku_id: skuId // The SKU ID for 10 gems
+                });
 
-            if (purchaseResult.code === 0) {
-                // Purchase was successful, now process it on our server
-                this.showMessage('✅ Purchase successful! Processing...');
+                console.log('💳 Discord purchase result:', purchaseResult);
+            }
+
+            if (purchaseResult != null && purchaseResult.length > 0) {
+                console.log("✅ User owns the SKU, unlock features now");
+
 
                 const response = await fetch(API_ENDPOINTS.addBattleGems, {
                     method: 'POST',
@@ -253,30 +270,30 @@ export default class BattleAIScene extends Phaser.Scene {
                     },
                     body: JSON.stringify({
                         discordUserId: discordUserId,
-                        skuId: '10_gems',
-                        purchaseToken: purchaseResult.data.purchase_token
+                        skuId: skuName,
+                        purchaseToken: purchaseResult[0].id
                     })
                 });
 
                 const result = await response.json();
-                
+                console.log('✅ Battle gems purchase processing result:', result);
                 if (result.success) {
                     this.battleGems = result.battleGems;
                     console.log('✅ Battle gems purchased:', result.message);
                     this.showMessage(`✅ ${result.message}`);
                     
                     // Refresh the character data UI to show updated gems
-                    this.showCharacterData();
+                    //this.showCharacterData();
+                    // refresh scene
+                    this.scene.restart()
                 } else {
                     console.log('⚠️ Battle gems purchase processing failed:', result.message);
                     this.showError(`⚠️ ${result.message}`);
                 }
-            } else {
-                // Purchase was cancelled or failed
-                const errorMessage = this.getDiscordPurchaseErrorMessage(purchaseResult.code);
-                console.log('❌ Discord purchase failed:', errorMessage);
-                this.showError(`❌ Purchase failed: ${errorMessage}`);
-            }
+              } else {
+                console.log("⚠️ Purchase didn’t create entitlement (unexpected)");
+              }
+
         } catch (error) {
             console.error('❌ Error in battle gems purchase flow:', error);
             if (error.message && error.message.includes('startPurchase')) {
@@ -639,7 +656,7 @@ export default class BattleAIScene extends Phaser.Scene {
          });
  
          // Battle gems count
-         this.add.text(centerX+30, gemsY - 4, `${this.battleGems}/5`, {
+         this.add.text(centerX+30, gemsY - 4, `${this.battleGems}`, {
              fontSize: '16px',
              fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
              color: '#ffffff',
@@ -652,16 +669,16 @@ export default class BattleAIScene extends Phaser.Scene {
              fontSize: '14px',
              fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
              color: '#ffffff',
-             backgroundColor: this.battleGems >= 5 ? '#95a5a6' : '#27ae60',
+             backgroundColor: '#27ae60',
              padding: { x: 15, y: 8 }
          }).setOrigin(0.5);
          
-         if (this.battleGems < 5) {
+        // if (this.battleGems < 5) {
              addGemsButton.setInteractive();
              addGemsButton.on('pointerdown', () => {
                  this.addBattleGems();
              });
-         }
+      //   }
  
          // Character status
          if (this.playerCharacter && this.playerCharacter.name) {

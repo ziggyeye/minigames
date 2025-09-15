@@ -667,15 +667,15 @@ export class RedisManager {
 
       const gemsKey = `minigames:battle_gems:${discordUserId}`;
       const currentGems = await this.getBattleGems(discordUserId);
-      const newTotal = Math.min(currentGems + amount, 5); // Max 5 gems
+      const newTotal = currentGems + amount;
       
-      if (newTotal === currentGems) {
-        return { 
-          success: false, 
-          newTotal: currentGems, 
-          message: 'Maximum battle gems (5) already reached' 
-        };
-      }
+      // if (newTotal === currentGems) {
+      //   return { 
+      //     success: false, 
+      //     newTotal: currentGems, 
+      //     message: 'Maximum battle gems (5) already reached' 
+      //   };
+      // }
 
       await this.client.set(gemsKey, newTotal);
       console.log(`💎 Added ${amount} battle gems to ${discordUserId}. New total: ${newTotal}`);
