@@ -46,7 +46,7 @@ export class APIRoutes {
     app.delete('/api/characters/delete', this.handleDeleteCharacter.bind(this));
     
     // Battle simulation endpoint
-    app.post('/api/battle/simulate', this.handleBattleSimulation.bind(this));
+   // app.post('/api/battle/simulate', this.handleBattleSimulation.bind(this));
     
     // Battle statistics endpoints
     app.get('/api/battle/stats/:discordUserId', this.handleGetBattleStats.bind(this));
@@ -553,133 +553,133 @@ export class APIRoutes {
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    */
-  async handleBattleSimulation(req, res) {
-    try {
-      const { playerCharacter, discordUserId, useBattleGem = false } = req.body;
+  // async handleBattleSimulation(req, res) {
+  //   try {
+  //     const { playerCharacter, discordUserId, useBattleGem = false } = req.body;
       
-      // Check battle cooldown first
-      const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+  //     // Check battle cooldown first
+  //     const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
       
-      if (cooldownStatus.onCooldown) {
-        if (useBattleGem) {
-          // Check if user has enough battle gems
-          const currentGems = await this.redisManager.getBattleGems(discordUserId.trim());
-          if (currentGems < 1) {
-            const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
-            return this.sendErrorResponse(res, 429, `Battle cooldown active and insufficient battle gems. Please wait ${timeRemainingSeconds} seconds or obtain more battle gems.`, {
-              cooldownExpiry: cooldownStatus.cooldownExpiry,
-              timeRemaining: cooldownStatus.timeRemaining,
-              battleGems: currentGems
-            });
-          }
+  //     if (cooldownStatus.onCooldown) {
+  //       if (useBattleGem) {
+  //         // Check if user has enough battle gems
+  //         const currentGems = await this.redisManager.getBattleGems(discordUserId.trim());
+  //         if (currentGems < 1) {
+  //           const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+  //           return this.sendErrorResponse(res, 429, `Battle cooldown active and insufficient battle gems. Please wait ${timeRemainingSeconds} seconds or obtain more battle gems.`, {
+  //             cooldownExpiry: cooldownStatus.cooldownExpiry,
+  //             timeRemaining: cooldownStatus.timeRemaining,
+  //             battleGems: currentGems
+  //           });
+  //         }
           
-          // Spend 1 battle gem to bypass cooldown
-          const spendResult = await this.redisManager.spendBattleGems(discordUserId.trim(), 1);
-          if (!spendResult.success) {
-            return this.sendErrorResponse(res, 400, spendResult.message);
-          }
+  //         // Spend 1 battle gem to bypass cooldown
+  //         const spendResult = await this.redisManager.spendBattleGems(discordUserId.trim(), 1);
+  //         if (!spendResult.success) {
+  //           return this.sendErrorResponse(res, 400, spendResult.message);
+  //         }
           
-          console.log(`💎 User ${discordUserId} spent 1 battle gem to bypass cooldown`);
-        } else {
-          const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
-          return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
-            cooldownExpiry: cooldownStatus.cooldownExpiry,
-            timeRemaining: cooldownStatus.timeRemaining
-          });
-        }
-      }
+  //         console.log(`💎 User ${discordUserId} spent 1 battle gem to bypass cooldown`);
+  //       } else {
+  //         const timeRemainingSeconds = Math.ceil(cooldownStatus.timeRemaining / 1000);
+  //         return this.sendErrorResponse(res, 429, `Battle cooldown active. Please wait ${timeRemainingSeconds} seconds before your next battle.`, {
+  //           cooldownExpiry: cooldownStatus.cooldownExpiry,
+  //           timeRemaining: cooldownStatus.timeRemaining
+  //         });
+  //       }
+  //     }
 
-      // Validate required fields
-      if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
-        return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
-      }
+  //     // Validate required fields
+  //     if (!playerCharacter || !playerCharacter.name || !playerCharacter.description) {
+  //       return this.sendErrorResponse(res, 400, 'Missing required fields: playerCharacter with name and description are required');
+  //     }
 
-      // Generate idempotency key
-      const requestId = req.headers['x-request-id'] || 
-                       req.headers['x-idempotency-key'] || 
-                       `battle_sim:${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  //     // Generate idempotency key
+  //     const requestId = req.headers['x-request-id'] || 
+  //                      req.headers['x-idempotency-key'] || 
+  //                      `battle_sim:${discordUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      const idempotencyKey = `battle_simulation:${requestId}`;
+  //     const idempotencyKey = `battle_simulation:${requestId}`;
 
-      // Check if this request was already processed
-      if (this.redisManager.isReady()) {
-        const existingResult = await this.redisManager.client.get(idempotencyKey);
-        if (existingResult) {
-          console.log(`🔄 Idempotency: Returning cached battle simulation result for ${requestId}`);
-          return res.json(JSON.parse(existingResult));
-        }
-      }
+  //     // Check if this request was already processed
+  //     if (this.redisManager.isReady()) {
+  //       const existingResult = await this.redisManager.client.get(idempotencyKey);
+  //       if (existingResult) {
+  //         console.log(`🔄 Idempotency: Returning cached battle simulation result for ${requestId}`);
+  //         return res.json(JSON.parse(existingResult));
+  //       }
+  //     }
 
-      console.log(`⚔️ Simulating battle for character: `, playerCharacter);
+  //     console.log(`⚔️ Simulating battle for character: `, playerCharacter);
 
-      // Generate AI opponent
-      const aiCharacter = this.selectRandomAICharacter();
+  //     // Generate AI opponent
+  //     const aiCharacter = this.selectRandomAICharacter();
       
-      // Simulate battle
-      const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
+  //     // Simulate battle
+  //     const battleResult = await this.simulateBattle(playerCharacter, aiCharacter);
 
-      // Update battle statistics for this specific character
-      const battleStats = await this.redisManager.updateBattleStats(discordUserId, battleResult, playerCharacter);
+  //     // Update battle statistics for this specific character
+  //     const battleStats = await this.redisManager.updateBattleStats(discordUserId, battleResult, playerCharacter);
 
-      // Get updated character level
-      const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
+  //     // Get updated character level
+  //     const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
 
-      let cooldownExpiry = null;
-      // Set battle cooldown
-      if (!useBattleGem)
-      {
-        cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
-      }
-      else {
-        const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
-        cooldownExpiry = cooldownStatus.cooldownExpiry;
-      }
+  //     let cooldownExpiry = null;
+  //     // Set battle cooldown
+  //     if (!useBattleGem)
+  //     {
+  //       cooldownExpiry = await this.redisManager.setBattleCooldown(discordUserId);
+  //     }
+  //     else {
+  //       const cooldownStatus = await this.redisManager.checkBattleCooldown(discordUserId.trim());
+  //       cooldownExpiry = cooldownStatus.cooldownExpiry;
+  //     }
 
-      // Get updated battle gems count
-      const battleGems = await this.redisManager.getBattleGems(discordUserId);
+  //     // Get updated battle gems count
+  //     const battleGems = await this.redisManager.getBattleGems(discordUserId);
 
-      const response = {
-        success: true,
-        playerCharacter: playerCharacter,
-        aiCharacter: aiCharacter,
-        battleResult: battleResult,
-        battleStats: battleStats,
-        characterLevel: characterLevel,
-        cooldownExpiry: cooldownExpiry ? cooldownExpiry.toISOString() : null,
-        battleGems: battleGems,
-        timestamp: new Date().toISOString()
-      };
+  //     const response = {
+  //       success: true,
+  //       playerCharacter: playerCharacter,
+  //       aiCharacter: aiCharacter,
+  //       battleResult: battleResult,
+  //       battleStats: battleStats,
+  //       characterLevel: characterLevel,
+  //       cooldownExpiry: cooldownExpiry ? cooldownExpiry.toISOString() : null,
+  //       battleGems: battleGems,
+  //       timestamp: new Date().toISOString()
+  //     };
       
-      // Cache the result for idempotency (expires in 1 hour)
-      if (this.redisManager.isReady()) {
-        await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
-      }
+  //     // Cache the result for idempotency (expires in 1 hour)
+  //     if (this.redisManager.isReady()) {
+  //       await this.redisManager.client.setEx(idempotencyKey, 3600, JSON.stringify(response));
+  //     }
       
-      // Post battle summary to Discord (non-blocking)
-      try {
-       // if (this.discordManager && this.discordManager.isBotReady()) {
-          console.log(`📤 Posting battle summary to Discord for user ${discordUserId}`);
-          const discordResult = await this.discordManager.postBattleSummaryToDiscord(response, discordUserId);
-          if (discordResult.success) {
-            console.log('✅ Battle summary posted to Discord successfully');
-          } else {
-            console.warn('⚠️ Failed to post battle summary to Discord:', discordResult.error);
-          }
-        // } else {
-        //   console.log('ℹ️ Discord bot not available, skipping battle summary post');
-        // }
-      } catch (discordError) {
-        console.warn('⚠️ Error posting to Discord (non-critical):', discordError.message);
-        // Continue with battle response even if Discord fails
-      }
+  //     // Post battle summary to Discord (non-blocking)
+  //     try {
+  //      // if (this.discordManager && this.discordManager.isBotReady()) {
+  //         console.log(`📤 Posting battle summary to Discord for user ${discordUserId}`);
+  //         const discordResult = await this.discordManager.postBattleSummaryToDiscord(response, discordUserId);
+  //         if (discordResult.success) {
+  //           console.log('✅ Battle summary posted to Discord successfully');
+  //         } else {
+  //           console.warn('⚠️ Failed to post battle summary to Discord:', discordResult.error);
+  //         }
+  //       // } else {
+  //       //   console.log('ℹ️ Discord bot not available, skipping battle summary post');
+  //       // }
+  //     } catch (discordError) {
+  //       console.warn('⚠️ Error posting to Discord (non-critical):', discordError.message);
+  //       // Continue with battle response even if Discord fails
+  //     }
       
-      res.json(response);
+  //     res.json(response);
 
-    } catch (error) {
-      console.error('❌ Error in battle simulation:', error);
-      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
-    }
-  }
+  //   } catch (error) {
+  //     console.error('❌ Error in battle simulation:', error);
+  //     this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+  //   }
+  // }
 
   /**
    * Select a random AI character for battle

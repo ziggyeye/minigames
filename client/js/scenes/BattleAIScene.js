@@ -361,7 +361,7 @@ export default class BattleAIScene extends Phaser.Scene {
                  this.pvpBattleButton.list[1].setText(`⏰ Cooldown: ${timeRemaining}`);
                  this.pvpBattleButton.list[0].clear();
                  this.pvpBattleButton.list[0].fillStyle(0x95a5a6, 1);
-                 this.pvpBattleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                 this.pvpBattleButton.list[0].fillRoundedRect(-90, -20, 180, 40, 12);
                  this.pvpBattleButton.disableInteractive();
                 
                 // Enable battle with gem button if it exists
@@ -388,7 +388,7 @@ export default class BattleAIScene extends Phaser.Scene {
                  this.pvpBattleButton.list[1].setText('⚔️ Battle!');
                  this.pvpBattleButton.list[0].clear();
                  this.pvpBattleButton.list[0].fillStyle(0x9b59b6, 1);
-                 this.pvpBattleButton.list[0].fillRoundedRect(0, 0, 180, 40, 12);
+                this.pvpBattleButton.list[0].fillRoundedRect(-90, -20, 180, 40, 12);
                  this.pvpBattleButton.setInteractive();
                  this.pvpBattleButton.on('pointerdown', () => {
                      this.startPVPBattle();
@@ -1364,26 +1364,26 @@ export default class BattleAIScene extends Phaser.Scene {
         });
     }
 
-    async startBattle() {
-        if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
-            this.showError('No character selected! Please go back and select a character.');
-            return;
-        }
+    // async startBattle() {
+    //     if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
+    //         this.showError('No character selected! Please go back and select a character.');
+    //         return;
+    //     }
 
-        // Check cooldown
-        const cooldownStatus = this.checkCooldown();
-        if (cooldownStatus.onCooldown) {
-            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-            this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
-            return;
-        }
+    //     // Check cooldown
+    //     const cooldownStatus = this.checkCooldown();
+    //     if (cooldownStatus.onCooldown) {
+    //         const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+    //         this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
+    //         return;
+    //     }
 
-        this.isLoading = true;
-        this.showLoadingScreen();
+    //     this.isLoading = true;
+    //     this.showLoadingScreen();
         
-        // Simulate battle on server
-        await this.simulateBattle();
-    }
+    //     // Simulate battle on server
+    //     await this.simulateBattle();
+    // }
 
     async saveCharacterToServer() {
         try {
@@ -1972,131 +1972,131 @@ export default class BattleAIScene extends Phaser.Scene {
         this.scene.restart();
     }
 
-    async startNewBattle() {
-        // Check cooldown
-        const cooldownStatus = this.checkCooldown();
-        if (cooldownStatus.onCooldown) {
-            const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
-            this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
-            return;
-        }
+    // async startNewBattle() {
+    //     // Check cooldown
+    //     const cooldownStatus = this.checkCooldown();
+    //     if (cooldownStatus.onCooldown) {
+    //         const timeRemaining = this.formatTimeRemaining(cooldownStatus.timeRemaining);
+    //         this.showError(`Battle cooldown active. Please wait ${timeRemaining} before your next battle.`);
+    //         return;
+    //     }
 
-        // Keep the same player character but request a new battle from server
-        this.isLoading = true;
-        this.showLoadingScreen();
+    //     // Keep the same player character but request a new battle from server
+    //     this.isLoading = true;
+    //     this.showLoadingScreen();
         
-        // Simulate new battle on server
-        await this.simulateBattle();
-    }
+    //     // Simulate new battle on server
+    //     await this.simulateBattle();
+    // }
 
-    async startBattleWithGem() {
-        if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
-            this.showError('No character selected! Please go back and select a character.');
-            return;
-        }
+    // async startBattleWithGem() {
+    //     if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
+    //         this.showError('No character selected! Please go back and select a character.');
+    //         return;
+    //     }
 
-        if (this.battleGems < 1) {
-            this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
-            return;
-        }
+    //     if (this.battleGems < 1) {
+    //         this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
+    //         return;
+    //     }
 
-        // Start battle using a gem to bypass cooldown
-        this.isLoading = true;
-        this.showLoadingScreen();
+    //     // Start battle using a gem to bypass cooldown
+    //     this.isLoading = true;
+    //     this.showLoadingScreen();
         
-        // Simulate battle on server with gem usage
-        await this.simulateBattleWithGem();
-    }
+    //     // Simulate battle on server with gem usage
+    //     await this.simulateBattleWithGem();
+    // }
 
-    async startNewBattleWithGem() {
-        if (this.battleGems < 1) {
-            this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
-            return;
-        }
+    // async startNewBattleWithGem() {
+    //     if (this.battleGems < 1) {
+    //         this.showError('Insufficient battle gems. You need at least 1 gem to battle during cooldown.');
+    //         return;
+    //     }
 
-        // Start new battle using a gem to bypass cooldown
-        this.isLoading = true;
-        this.showLoadingScreen();
+    //     // Start new battle using a gem to bypass cooldown
+    //     this.isLoading = true;
+    //     this.showLoadingScreen();
         
-        // Simulate battle on server with gem usage
-        await this.simulateBattleWithGem();
-    }
+    //     // Simulate battle on server with gem usage
+    //     await this.simulateBattleWithGem();
+    // }
 
-    async simulateBattleWithGem() {
-        try {
-            // Get Discord user ID
-            const discordUserId = this.getDiscordUserId();
+    // async simulateBattleWithGem() {
+    //     try {
+    //         // Get Discord user ID
+    //         const discordUserId = this.getDiscordUserId();
             
-            console.log('💎 Requesting battle simulation with gem usage from server...');
+    //         console.log('💎 Requesting battle simulation with gem usage from server...');
 
-            const response = await fetch(API_ENDPOINTS.battleSimulation, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Request-Id': `battle_gem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                },
-                body: JSON.stringify({
-                    playerCharacter: this.playerCharacter,
-                    discordUserId: discordUserId,
-                    useBattleGem: true
-                })
-            });
+    //         const response = await fetch(API_ENDPOINTS.battleSimulation, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //                 'X-Request-Id': `battle_gem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    //             },
+    //             body: JSON.stringify({
+    //                 playerCharacter: this.playerCharacter,
+    //                 discordUserId: discordUserId,
+    //                 useBattleGem: true
+    //             })
+    //         });
 
-            const result = await response.json();
+    //         const result = await response.json();
             
-            if (result.success) {
-                console.log('✅ Battle simulation with gem completed:', result);
+    //         if (result.success) {
+    //             console.log('✅ Battle simulation with gem completed:', result);
                 
-                // Set the AI character from server response
-                this.aiCharacter = result.aiCharacter;
+    //             // Set the AI character from server response
+    //             this.aiCharacter = result.aiCharacter;
                 
-                // Set the battle result from server response
-                this.battleResult = result.battleResult;
+    //             // Set the battle result from server response
+    //             this.battleResult = result.battleResult;
 
-                // Update battle statistics from server response
-                if (result.battleStats) {
-                    this.battleStats = result.battleStats;
-                } else {
-                    // Fallback to default stats if server doesn't provide them
-                    this.battleStats = {
-                        totalBattles: 0,
-                        wins: 0,
-                        losses: 0,
-                        ties: 0,
-                        winRate: 0
-                    };
-                }
+    //             // Update battle statistics from server response
+    //             if (result.battleStats) {
+    //                 this.battleStats = result.battleStats;
+    //             } else {
+    //                 // Fallback to default stats if server doesn't provide them
+    //                 this.battleStats = {
+    //                     totalBattles: 0,
+    //                     wins: 0,
+    //                     losses: 0,
+    //                     ties: 0,
+    //                     winRate: 0
+    //                 };
+    //             }
 
-                // Update character level from server response
-                if (result.characterLevel !== undefined) {
-                    this.characterLevel = result.characterLevel;
-                }
+    //             // Update character level from server response
+    //             if (result.characterLevel !== undefined) {
+    //                 this.characterLevel = result.characterLevel;
+    //             }
 
-                // Update cooldown from server response
-                if (result.cooldownExpiry) {
-                    this.cooldownExpiry = new Date(result.cooldownExpiry);
-                    console.log('⏰ Battle cooldown set until:', this.cooldownExpiry);
-                }
+    //             // Update cooldown from server response
+    //             if (result.cooldownExpiry) {
+    //                 this.cooldownExpiry = new Date(result.cooldownExpiry);
+    //                 console.log('⏰ Battle cooldown set until:', this.cooldownExpiry);
+    //             }
 
-                // Update battle gems from server response
-                if (result.battleGems !== undefined) {
-                    this.battleGems = result.battleGems;
-                    console.log('💎 Battle gems updated:', this.battleGems);
-                }
+    //             // Update battle gems from server response
+    //             if (result.battleGems !== undefined) {
+    //                 this.battleGems = result.battleGems;
+    //                 console.log('💎 Battle gems updated:', this.battleGems);
+    //             }
 
-                this.isLoading = false;
-                this.showBattleResult();
-            } else {
-                console.error('❌ Battle simulation with gem failed:', result.error);
-                this.showError('Battle simulation failed. Please try again.');
-                this.isLoading = false;
-            }
-        } catch (error) {
-            console.error('❌ Error requesting battle simulation with gem:', error);
-            this.showError('Failed to connect to battle server. Please try again.');
-            this.isLoading = false;
-        }
-    }
+    //             this.isLoading = false;
+    //             this.showBattleResult();
+    //         } else {
+    //             console.error('❌ Battle simulation with gem failed:', result.error);
+    //             this.showError('Battle simulation failed. Please try again.');
+    //             this.isLoading = false;
+    //         }
+    //     } catch (error) {
+    //         console.error('❌ Error requesting battle simulation with gem:', error);
+    //         this.showError('Failed to connect to battle server. Please try again.');
+    //         this.isLoading = false;
+    //     }
+    // }
 
     async startPVPBattle() {
         if (!this.playerCharacter || !this.playerCharacter.name || !this.playerCharacter.description) {
