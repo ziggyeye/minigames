@@ -950,8 +950,8 @@ export class RedisManager {
   async getCharacterByUserAndName(discordUserId, characterName) {
     try {
       if (!this.isReady()) {
-        console.log('⚠️  Redis not ready, returning null for character');
-        return null;
+        console.log('⚠️  Redis not ready, returning fake character data');
+        return this.generateFakeCharacterData(discordUserId, characterName);
       }
 
       // Get character ID from user's character list
@@ -970,11 +970,70 @@ export class RedisManager {
         }
       }
 
-      return null;
+      // Character not found, return fake data
+      console.log(`⚠️  Character "${characterName}" not found for user ${discordUserId}, returning fake data`);
+      if (characterName == undefined) {
+        return this.generateFakeCharacterData(discordUserId, "The Unknown Warrior");
+      }
+      return this.generateFakeCharacterData(discordUserId, characterName);
     } catch (error) {
       console.error('❌ Error getting character by user and name:', error);
-      return null;
+      console.log('⚠️  Returning fake character data due to error');
+      return this.generateFakeCharacterData(discordUserId, characterName);
     }
+  }
+
+  /**
+   * Generate fake character data when real character can't be found
+   * @param {string} discordUserId - Discord user ID
+   * @param {string} characterName - Character name
+   * @returns {Object} Fake character data
+   */
+  generateFakeCharacterData(discordUserId, characterName) {
+    // Generate random stats (10 points total)
+    const stats = this.generateRandomStats();
+    
+    const fakeCharacter = {
+      characterId: `fake_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      characterName: characterName,
+      description: `A mysterious warrior known as ${characterName}. Their true nature remains unknown, but they possess formidable battle skills.`,
+      stats: stats,
+      discordUserId: discordUserId,
+      createdAt: new Date().toISOString(),
+      isFake: true // Flag to indicate this is fake data
+    };
+
+    console.log(`🎭 Generated fake character data for "${characterName}":`, fakeCharacter);
+    return fakeCharacter;
+  }
+
+  /**
+   * Generate random character stats (10 points total)
+   * @returns {Object} Random stats object
+   */
+  generateRandomStats() {
+    const totalPoints = 10;
+    const minStat = 1;
+    
+    // Generate random stats that add up to totalPoints
+    let remainingPoints = totalPoints - 4; // Reserve 1 point for each stat
+    
+    const stats = {
+      STR: minStat,
+      DEX: minStat,
+      CON: minStat,
+      INT: minStat
+    };
+    
+    // Distribute remaining points randomly
+    const statKeys = Object.keys(stats);
+    while (remainingPoints > 0) {
+      const randomStat = statKeys[Math.floor(Math.random() * statKeys.length)];
+      stats[randomStat]++;
+      remainingPoints--;
+    }
+    
+    return stats;
   }
 
   /**
