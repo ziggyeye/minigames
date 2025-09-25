@@ -212,7 +212,29 @@ export class RedisManager {
       }
 
       const scores = await this.client.zRange(this.HIGH_SCORES_KEY, 0, limit - 1, { REV: true });
-      return scores.map(score => JSON.parse(score));
+      let scoresMap = scores.map(score => JSON.parse(score));
+
+      const fakeNames = [
+        "Condiment Bob",
+        "DogMan",
+        "Detective Paws",
+        "KickBall Guy",
+        "Psycho Panda",
+        "Shadow Wing",
+        "Cool Beans",
+        "Doughboy",
+        "Frozen Flake",
+        "Fry Cook",
+        "Ice Cream Man"
+      ]
+
+      let i = 0;
+      scoresMap.forEach(score => {
+        score.playerName = score.playerName.replace('undefined', fakeNames[i]);
+        i++;
+      });
+
+      return scoresMap;
     } catch (error) {
       console.error('❌ Error getting high scores:', error);
       return [];
@@ -1270,8 +1292,28 @@ export class RedisManager {
       });
 
       // Return top N characters
-      const topCharacters = characterStats.slice(0, limit);
+      let topCharacters = characterStats.slice(0, limit);
       console.log(`🏆 Retrieved top ${topCharacters.length} PVP characters by win rate`);
+
+      const fakeNames = [
+        "Condiment Bob",
+        "DogMan",
+        "Detective Paws",
+        "KickBall Guy",
+        "Psycho Panda",
+        "Shadow Wing",
+        "Cool Beans",
+        "Doughboy",
+        "Frozen Flake",
+        "Fry Cook",
+        "Ice Cream Man"
+      ]
+
+      let i = 0;
+      topCharacters.forEach(characters => {
+        characters.characterName = characters.characterName.replace('Condiment Bob', fakeNames[i]);
+        i++;
+      });
       
       return topCharacters;
 

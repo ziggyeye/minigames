@@ -306,9 +306,9 @@ export default class PVPHighScoreScene extends Phaser.Scene {
         // Create tooltip background
         const tooltipBg = this.add.graphics();
         tooltipBg.fillStyle(0x2c3e50, 0.95);
-        tooltipBg.fillRoundedRect(x - 150, y - 80, 300, 160, 10);
+        tooltipBg.fillRoundedRect(-150, -80, 300, 160, 10);
         tooltipBg.lineStyle(2, 0xe74c3c, 0.8);
-        tooltipBg.strokeRoundedRect(x - 150, y - 80, 300, 160, 10);
+        tooltipBg.strokeRoundedRect(-150, -80, 300, 160, 10);
 
         // Character details
         this.tooltip = this.add.container(x, y);
