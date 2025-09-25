@@ -964,7 +964,7 @@ export class APIRoutes {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro", 
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", 
       config: {
       thinkingConfig: {
         thinkingBudget: 0,  // disables thinking

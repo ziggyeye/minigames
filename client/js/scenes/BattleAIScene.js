@@ -668,7 +668,7 @@ export default class BattleAIScene extends Phaser.Scene {
          });
  
         // Add battle gems button (disabled if at max)
-        const addGemsButton = this.add.text(centerX, gemsY+50, '💎 Buy 10 Gems', {
+        const addGemsButton = this.add.text(centerX, gemsY+50, '💎 Buy 10 Gems: $0.99 sale!', {
              fontSize: '14px',
              fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
              color: '#ffffff',
@@ -682,17 +682,25 @@ export default class BattleAIScene extends Phaser.Scene {
                  this.addBattleGems();
              });
       //   }
+
+        this.add.text(centerX, gemsY + 90, `Please consider buying gems to support the development of the game`, {
+            fontSize: '16px',
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+            color: '#2ecc71',
+            alpha: 0.8
+        }).setOrigin(0.5);
+
  
          // Character status
          if (this.playerCharacter && this.playerCharacter.name) {
-             this.add.text(centerX, gemsY + 100, `✅ Ready to battle with ${this.playerCharacter.name}`, {
+             this.add.text(centerX, gemsY + 145, `✅ Ready to battle with ${this.playerCharacter.name}`, {
                  fontSize: '12px',
                  fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                  color: '#2ecc71',
                  alpha: 0.8
              }).setOrigin(0.5);
          } else {
-             this.add.text(centerX, gemsY + 100, '⚠️ No character selected - go back to select a character', {
+             this.add.text(centerX, gemsY + 145, '⚠️ No character selected - go back to select a character', {
                  fontSize: '12px',
                  fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
                  color: '#f39c12',

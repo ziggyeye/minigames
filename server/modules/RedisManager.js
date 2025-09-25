@@ -995,8 +995,8 @@ export class RedisManager {
     
     const fakeCharacter = {
       characterId: `fake_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      characterName: characterName,
-      description: `A mysterious warrior known as ${characterName}. Their true nature remains unknown, but they possess formidable battle skills.`,
+      characterName: "Condiment Bob",
+      description: `Sprays various condiments on his enemies.`,
       stats: stats,
       discordUserId: discordUserId,
       createdAt: new Date().toISOString(),
