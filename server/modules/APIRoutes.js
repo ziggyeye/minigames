@@ -57,7 +57,7 @@ export class APIRoutes {
     app.get('/api/battleGems/:discordUserId', this.handleGetBattleGems.bind(this));
     
     // Top characters by win rate endpoint
-    app.get('/api/topCharacters', this.handleGetTopCharacters.bind(this));
+    //app.get('/api/topCharacters', this.handleGetTopCharacters.bind(this));
     
     // PVP battle simulation endpoint
     app.post('/api/pvp/battle/simulate', this.handlePVPBattleSimulation.bind(this));
@@ -1965,37 +1965,37 @@ Format your result as a single paragraph.`;
     }
   }
 
-  /**
-   * Handle get top characters by win rate
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   */
-  async handleGetTopCharacters(req, res) {
-    try {
-      const { limit = 10 } = req.query;
-      const limitNum = parseInt(limit);
+  // /**
+  //  * Handle get top characters by win rate
+  //  * @param {Object} req - Express request object
+  //  * @param {Object} res - Express response object
+  //  */
+  // async handleGetTopCharacters(req, res) {
+  //   try {
+  //     const { limit = 10 } = req.query;
+  //     const limitNum = parseInt(limit);
       
-      if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
-        return this.sendErrorResponse(res, 400, 'Invalid limit parameter. Must be between 1 and 50.');
-      }
+  //     if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
+  //       return this.sendErrorResponse(res, 400, 'Invalid limit parameter. Must be between 1 and 50.');
+  //     }
 
-      console.log(`🏆 Getting top ${limitNum} characters by win rate`);
+  //     console.log(`🏆 Getting top ${limitNum} characters by win rate`);
 
-      const topCharacters = await this.redisManager.getTopCharactersByWinRate(limitNum);
+  //     const topCharacters = await this.redisManager.getTopCharactersByWinRate(limitNum);
       
-      res.json({
-        success: true,
-        characters: topCharacters,
-        count: topCharacters.length,
-        limit: limitNum,
-        timestamp: new Date().toISOString()
-      });
+  //     res.json({
+  //       success: true,
+  //       characters: topCharacters,
+  //       count: topCharacters.length,
+  //       limit: limitNum,
+  //       timestamp: new Date().toISOString()
+  //     });
 
-    } catch (error) {
-      console.error('❌ Error getting top characters:', error);
-      this.sendErrorResponse(res, 500, 'Internal server error', error.message);
-    }
-  }
+  //   } catch (error) {
+  //     console.error('❌ Error getting top characters:', error);
+  //     this.sendErrorResponse(res, 500, 'Internal server error', error.message);
+  //   }
+  // }
 
   /**
    * Handle PVP battle simulation

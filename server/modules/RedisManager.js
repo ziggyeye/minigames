@@ -1025,7 +1025,7 @@ export class RedisManager {
       isFake: true // Flag to indicate this is fake data
     };
 
-    console.log(`🎭 Generated fake character data for "${characterName}":`, fakeCharacter);
+    //console.log(`🎭 Generated fake character data for "${characterName}":`, fakeCharacter);
     return fakeCharacter;
   }
 
@@ -1106,10 +1106,45 @@ export class RedisManager {
 
       // Get the opponent character details
       console.log('ℹ️  Find opponent character: ', opponentDiscordUserId, opponentCharacterName);
+
+      const fakeNames = [
+        "Condiment Bob",
+        "DogMan",
+        "Detective Paws",
+        "KickBall Guy",
+        "Psycho Panda",
+        "Shadow Wing",
+        "Cool Beans",
+        "Doughboy",
+        "Frozen Flake",
+        "Fry Cook",
+        "Ice Cream Man"
+      ]
+  
+      const fakeDescriptions = [
+        "Sprays various condiments on his enemies",
+        "Uses powerful jaws and teeth to tear his enemies apart",
+        "High intelligence and strategic thinking",
+        "Kicks a metallic ball to knock his enemies off their feet",
+        "Psyhic abilties to attack his enemies",
+        "Flies and hieds in the shadows",
+        "Farts on his enemies",
+        "Made of indestructible dough",
+        "sprays cereal on his enemies",
+        "Attacks with a deadly fork and frying pan",
+        "Gives his enemies any type of ice cream they way."
+      ]
+
       const opponentCharacter = await this.getCharacterByUserAndName(opponentDiscordUserId, opponentCharacterName);
       
       if (opponentCharacter) {
         console.log('✅ Found PVP opponent:', opponentCharacter.characterName);
+
+        const index = Math.floor(Math.random() * fakeNames.length);
+        if (opponentCharacter.characterName == "Condiment Bob") {
+          opponentCharacter.characterName = fakeNames[index];
+          opponentCharacter.description = fakeDescriptions[index];
+        }
         return {
           ...opponentCharacter,
           discordUserId: opponentDiscordUserId
