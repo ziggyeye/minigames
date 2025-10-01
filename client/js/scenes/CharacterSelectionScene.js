@@ -549,7 +549,7 @@ export default class CharacterSelectionScene extends Phaser.Scene {
                 return;
             }
 
-            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterBattleStats
+            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterPVPBattleStats
                 .replace(':discordUserId', discordUserId)
                 .replace(':characterName', encodeURIComponent(character.characterName));
                 

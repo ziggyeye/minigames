@@ -118,7 +118,7 @@ export default class BattleAIScene extends Phaser.Scene {
             
             console.log('📊 Loading battle statistics from server for character:', characterName, 'user:', discordUserId);
 
-            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterBattleStats
+            const getCharacterBattleStatsUrl = API_ENDPOINTS.characterPVPBattleStats
                 .replace(':discordUserId', discordUserId)
                 .replace(':characterName', encodeURIComponent(characterName));
                 

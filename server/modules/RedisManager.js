@@ -456,49 +456,56 @@ export class RedisManager {
    * @param {Object} playerCharacter - Player character object
    * @returns {Promise<Object>} Updated battle statistics
    */
-  // async updateBattleStats(discordUserId, battleResult, playerCharacter) {
-  //   try {
-  //     if (!this.isReady()) {
-  //       console.warn('⚠️  Redis not ready, skipping battle stats update');
-  //       return this.getDefaultBattleStats();
-  //     }
+  async updateBattleStats(discordUserId, battleResult, playerCharacter) {
+    try {
+      if (!this.isReady()) {
+        console.warn('⚠️  Redis not ready, skipping battle stats update');
+        return this.getDefaultBattleStats();
+      }
 
-  //     // Use character-specific key instead of user-specific key
-  //     const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}:${playerCharacter.name}`;
+      // Use character-specific key instead of user-specific key
+      const statsKey = `${this.BATTLE_STATS_KEY}:${discordUserId}:${playerCharacter.name}`;
       
-  //     // Get current stats or initialize
-  //     const currentStats = await this.getCharacterBattleStats(discordUserId, playerCharacter.name);
+      // Get current stats or initialize
+      const currentStats = await this.getCharacterBattleStats(discordUserId, playerCharacter.name);
       
-  //     // Update stats based on battle result
-  //     const playerWon = battleResult.winner.name === playerCharacter.name;
-  //     const updatedStats = {
-  //       totalBattles: currentStats.totalBattles + 1,
-  //       wins: currentStats.wins + (playerWon ? 1 : 0),
-  //       losses: currentStats.losses + (playerWon ? 0 : 1),
-  //       ties: currentStats.ties + (battleResult === 'tie' ? 1 : 0),
-  //       lastBattleDate: new Date().toISOString()
-  //     };
+      // Update stats based on battle result
+      const playerWon = battleResult.winner.name === playerCharacter.name;
+      const updatedStats = {
+        totalBattles: currentStats.totalBattles + 1,
+        wins: currentStats.wins + (playerWon ? 1 : 0),
+        losses: currentStats.losses + (playerWon ? 0 : 1),
+        ties: currentStats.ties + (battleResult.winner.name === battleResult.loser.name ? 1 : 0),
+        lastBattleDate: new Date().toISOString()
+      };
       
-  //     // Update character level
-  //     await this.updateCharacterLevel(discordUserId, playerCharacter.name, playerWon);
+      // Update character level
+      await this.updateCharacterLevel(discordUserId, playerCharacter.name, playerWon);
       
-  //     // Calculate win rate
-  //     updatedStats.winRate = updatedStats.totalBattles > 0 
-  //       ? Math.round((updatedStats.wins / updatedStats.totalBattles) * 100) 
-  //       : 0;
+      // Calculate win rate
+      updatedStats.winRate = updatedStats.totalBattles > 0 
+        ? Math.round((updatedStats.wins / updatedStats.totalBattles) * 100) 
+        : 0;
       
-  //     // Save updated stats
-  //     await this.client.hSet(statsKey, updatedStats);
+      // Save updated stats
+      await this.client.hSet(statsKey, {
+        totalBattles: updatedStats.totalBattles.toString(),
+        wins: updatedStats.wins.toString(),
+        losses: updatedStats.losses.toString(),
+        ties: updatedStats.ties.toString(),
+        winRate: updatedStats.winRate.toString(),
+        lastBattleDate: updatedStats.lastBattleDate
+      });
       
-  //     console.log(`📊 Battle stats updated for character ${playerCharacter.name} (${discordUserId}): ${updatedStats.wins}W/${updatedStats.losses}L (${updatedStats.winRate}%)`);
+      console.log(`📊 Battle stats updated for character ${playerCharacter.name} (${discordUserId}): ${updatedStats.wins}W/${updatedStats.losses}L (${updatedStats.winRate}%)`);
       
-  //     return updatedStats;
+      return updatedStats;
 
-  //   } catch (error) {
-  //     console.error('❌ Error updating battle stats:', error);
-  //     return this.getDefaultBattleStats();
-  //   }
-  // }
+    } catch (error) {
+      console.error('❌ Error updating battle stats:', error);
+      return this.getDefaultBattleStats();
+    }
+  }
 
   /**
    * Update character level based on battle result
@@ -1078,8 +1085,8 @@ export class RedisManager {
       const battleStatsKeys = await this.client.keys(battleStatsPattern);
 
       if (battleStatsKeys.length === 0) {
-        console.log('ℹ️  No characters with battle experience found');
-        return null;
+        console.log('ℹ️  No characters with battle experience found, returning dummy AI opponent');
+        return this.generateDummyAIOpponent();
       }
 
       // Filter out the player's own characters
@@ -1094,8 +1101,8 @@ export class RedisManager {
       });
 
       if (opponentKeys.length === 0) {
-        console.log('ℹ️  No other players found for PVP');
-        return null;
+        console.log('ℹ️  No other players found for PVP, returning dummy AI opponent');
+        return this.generateDummyAIOpponent();
       }
 
       // Get a random opponent
@@ -1636,6 +1643,49 @@ export class RedisManager {
       console.error('❌ Error marking purchase as processed:', error);
       return false;
     }
+  }
+
+  /**
+   * Generate a dummy AI opponent when no real players are available
+   * @returns {Object} Dummy AI opponent character
+   */
+  generateDummyAIOpponent() {
+    const aiCharacters = [
+      {
+        characterName: "Shadow Blade",
+        description: "A mutant ninja warrior with the ability to teleport through shadows. Can summon a demonic fiery blade as a weapon.",
+        stats: { STR: 2, DEX: 4, CON: 2, INT: 2 },
+        discordUserId: "ai_opponent_1"
+      },
+      {
+        characterName: "Solar Flare",
+        description: "A cosmic warrior who harnesses the power of the sun. Can create devastating solar explosions and heal allies.",
+        stats: { STR: 3, DEX: 2, CON: 3, INT: 2 },
+        discordUserId: "ai_opponent_2"
+      },
+      {
+        characterName: "Thunder Strike",
+        description: "An electric warrior with the power to control lightning. Can summon storms and strike with electric force.",
+        stats: { STR: 2, DEX: 3, CON: 2, INT: 3 },
+        discordUserId: "ai_opponent_3"
+      },
+      {
+        characterName: "Ice Guardian",
+        description: "A frost warrior who commands the power of ice and snow. Can freeze enemies and create protective ice barriers.",
+        stats: { STR: 3, DEX: 1, CON: 4, INT: 2 },
+        discordUserId: "ai_opponent_4"
+      },
+      {
+        characterName: "Wind Walker",
+        description: "A swift warrior who controls the winds. Can fly and create powerful wind attacks.",
+        stats: { STR: 1, DEX: 4, CON: 2, INT: 3 },
+        discordUserId: "ai_opponent_5"
+      }
+    ];
+
+    // Return a random AI character
+    const randomIndex = Math.floor(Math.random() * aiCharacters.length);
+    return aiCharacters[randomIndex];
   }
 
   /**

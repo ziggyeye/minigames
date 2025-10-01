@@ -182,15 +182,6 @@ export default class MenuScene extends Phaser.Scene {
         // PVP High Scores Card
         this.createGameCard(centerX, 500, '⚔️', 'High Scores', 
             'View the top PVP champions!', 'pvp-high-scores');
-        
-        
-        this.add.text(centerX, centerY, "Scores and Characters will reset Oct 1st!\nTop Character for the month will be displayed!", {
-            fontSize: '24px',
-            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-            color: '#ffffff',
-            wordWrap: { width: this.cameras.main.width-20 }
-        }).setOrigin(0.5);
-
 
         // Add Discord join button and other links
         this.createDiscordJoinButton();

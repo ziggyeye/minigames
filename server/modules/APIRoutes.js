@@ -2083,8 +2083,12 @@ Format your result as a single paragraph.`;
       // Update PVP battle statistics for the player
       const battleStats = await this.redisManager.updatePVPBattleStats(discordUserId, battleResult, playerCharacter);
       
-      // Update PVP battle statistics for the opponent
-      await this.redisManager.updatePVPBattleStats(pvpOpponent.discordUserId, battleResult, pvpOpponent);
+      // Update PVP battle statistics for the opponent (only if it's a real player, not AI)
+      if (!pvpOpponent.discordUserId.startsWith('ai_opponent_')) {
+        await this.redisManager.updatePVPBattleStats(pvpOpponent.discordUserId, battleResult, pvpOpponent);
+      } else {
+        console.log('🤖 Skipping battle stats update for AI opponent:', pvpOpponent.characterName);
+      }
 
       // Get updated character level
       const characterLevel = await this.redisManager.getCharacterLevel(discordUserId, playerCharacter.name);
